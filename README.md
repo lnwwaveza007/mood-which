@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 12 Mood Chibi & Sandwiches Quiz 🥪✨ (Inside-Out Style)
 
-## Getting Started
+Interactive Web Quiz สไตล์ **Inside-Out** ที่พาผู้เล่นไปค้นพบ **12 Chibi ประจำอารมณ์** พร้อมโปรโมตการสั่งซื้อแซนด์วิชของทางร้านที่มี **4 ไส้หลัก (4 Fundamental Sandwiches)** โดยลูกค้าสามารถสั่งแบบ **"1 ชิ้นไส้นึง อีกชิ้นอีกไส้นึงได้ (Mix & Match Duo Fillings)"** เพื่อสร้างรสชาติและพลังงานที่ตรงกับ 12 สภาวะอารมณ์!
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🎨 คอนเซ็ปต์ 12 Chibi & การจับคู่แซนด์วิช (12 Chibi Characters & Sandwich Pairing)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ร้านมี **4 ไส้แซนด์วิชหลัก (4 Base Fillings)**:
+1. ☀️ **ไส้ซันไชน์ แฮมชีสฮันนี่มัสตาร์ด** (แทนอารมณ์สุขสดใส)
+2. 🥱 **ไส้เนยเค็มฝรั่งเศส มันฝรั่งทอดกรอบ** (แทนอารมณ์เบื่อหน่าย)
+3. 😡 **ไส้สไปซี่พูลพอร์ค ฮาลาพิโญ่บาร์บีคิว** (แทนอารมณ์โกรธเดือด)
+4. 😢 **ไส้ทรัฟเฟิลมัชรูม ครีมมี่ชีสเมลท์** (แทนอารมณ์เศร้าดิ่ง)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 🌟 4 Chibi อารมณ์หลัก (Single Flavor x2 ชิ้น)
+1. ☀️ **น้องซันนี่ (Sunny) — The Joyful Spark:** สุขสดใส 100% ➔ สั่ง **ไส้แฮมชีสฮันนี่มัสตาร์ด x2**
+2. 🥱 **น้องโบโร่ (Boro) — The Mundane Sloth:** เบื่อหน่าย 100% ➔ สั่ง **ไส้เนยเค็มมันฝรั่งกรอบ x2**
+3. 😡 **น้องฟิวรี่ (Fury) — The Fiery Fighter:** โกรธเดือด 100% ➔ สั่ง **ไส้สไปซี่พูลพอร์คบาร์บีคิว x2**
+4. 😢 **น้องกลูมมี่ (Gloomy) — The Melancholy Hug:** เศร้าดิ่ง 100% ➔ สั่ง **ไส้ทรัฟเฟิลมัชรูมชีส x2**
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+### 🌈 8 Chibi อารมณ์ผสม (Mix & Match Duo Fillings)
+5. ☁️ **น้องนูบิ (Nubi) — The Floating Cloud:** สุข ☀️ + เบื่อ 🥱 ➔ สั่งจับคู่ **แฮมชีส ☀️ + เนยเค็มมันฝรั่ง 🥱**
+6. ⚡ **น้องอิกนิส (Ignis) — The Hyper Dynamo:** สุข ☀️ + โกรธ 🔥 ➔ สั่งจับคู่ **แฮมชีส ☀️ + สไปซี่พูลพอร์ค 🔥**
+7. 🍂 **น้องออร่า (Aura) — The Nostalgic Dreamer:** สุข ☀️ + เศร้า 😢 ➔ สั่งจับคู่ **แฮมชีส ☀️ + ทรัฟเฟิลมัชรูม 😢**
+8. 😤 **น้องกรัมบี้ (Grumby) — The Spicy Sceptic:** เบื่อ 🥱 + โกรธ 🔥 ➔ สั่งจับคู่ **เนยเค็มมันฝรั่ง 🥱 + สไปซี่พูลพอร์ค 🔥**
+9. 🪫 **น้องสเปราต์ (Sprout) — The Drained Seedling:** เบื่อ 🥱 + เศร้า 😢 ➔ สั่งจับคู่ **เนยเค็มมันฝรั่ง 🥱 + ทรัฟเฟิลมัชรูม 😢**
+10. 💔 **น้องร็อกซี่ (Roxy) — The Broken Velvet:** โกรธ 🔥 + เศร้า 😢 ➔ สั่งจับคู่ **สไปซี่พูลพอร์ค 🔥 + ทรัฟเฟิลมัชรูม 😢**
+11. 🤯 **น้องซีนิธ (Zenith) — The Overthinking Mind:** เครียด ว้าวุ่น ➔ สั่งจับคู่ **เนยเค็มมันฝรั่ง 🥱 + ทรัฟเฟิลมัชรูม 😢 (คู่ชาเขียวมัทฉะ)**
+12. 😜 **น้องมิสชิฟ (Mischief) — The Cheeky Trickster:** ขี้เล่น กวนๆ ซุกซน ➔ สั่งจับคู่ **แฮมชีส ☀️ + สไปซี่พูลพอร์ค 🔥 (ทวิสต์คาราเมล)**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## ⚡ 4 คำถามจบใน 45 วินาที (45s Quick Quiz Flow)
 
-## Deploy on Vercel
+1. **Step 1:** ระดับพลังงานในใจ (Heart Battery: 100% → 75% → 50% → 25%)
+2. **Step 2:** สภาพอากาศในใจ (Heart Weather: แดดสดใส / ฟ้าผ่าเดือด / เมฆเทานิ่งๆ / ฝนตกดิ่งๆ)
+3. **Step 3:** กิจกรรมที่ใจเรียกร้อง (Instant Wish: คาเฟ่เม้าท์มอย / ต่อยมวย-สับงาน / นอนไถฟีด / ฟังเพลงคนเดียว)
+4. **Step 4:** เพลงประจำอารมณ์ (Heart Soundtrack: ป็อปสนุกสนาน / ร็อคบีทหนัก / Lo-fi คอร์ดวน / บัลลาดเปียโนซึ้ง)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🛠️ Tech Stack
+
+- **Framework:** Next.js (App Router, React 19, TypeScript)
+- **Styling:** Tailwind CSS (v4) with Thai Google Fonts (`Mali`, `Prompt`)
+- **Animations:** Framer Motion & Canvas Confetti
+- **Image Generation:** `html-to-image` (Ultra high-res 9:16 Story Card)
+- **QR Code:** `qrcode.react` (Dynamic SVG QR)
+- **Icons:** Lucide React

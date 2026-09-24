@@ -1,26 +1,94 @@
 @import "tailwindcss";
 
+/* ── MOOD-wich Design System Tokens ───────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --blue:   #1F41A8;
+  --yellow: #FFE94D;
+  --ink:    #0D0D0D;
+  --white:  #FFFFFF;
+  --red:    #E5322D;
+
+  --background: var(--blue);
+  --foreground: var(--white);
+
+  --font-display: var(--font-abril), "Abril Fatface", serif;
+  --font-thai:    var(--font-anuphan), "Anuphan", sans-serif;
+  --font-price:   var(--font-kanit), "Kanit", sans-serif;
+  --font-label:   var(--font-poppins), "Poppins", sans-serif;
+
+  --margin:         4vw;
+  --sticker-rotate: -6deg;
+  --bar-pad:        6px 10px;
+  --outline:        4px solid #fff;
 }
 
+/* ── Tailwind theme wiring ───────────────────────────────────────── */
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-foreground:  var(--foreground);
+  --color-blue:        var(--blue);
+  --color-yellow:      var(--yellow);
+  --color-ink:         var(--ink);
+  --color-alert:       var(--red);
+
+  --font-sans:    var(--font-thai);
+  --font-display: var(--font-display);
+  --font-price:   var(--font-price);
+  --font-label:   var(--font-label);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* ── Base styles ─────────────────────────────────────────────────── */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--blue);
+  color: var(--white);
+  font-family: var(--font-thai);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-label), var(--font-thai);
+}
+
+/* ── Grain texture overlay ───────────────────────────────────────── */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 233, 77, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 233, 77, 0.5); }
+
+/* ── Design system utility helpers ──────────────────────────────── */
+
+/* Black label bar */
+.label-bar {
+  background: var(--ink);
+  color: var(--white);
+  padding: var(--bar-pad);
+  font-family: var(--font-label);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.6875rem;
+}
+
+/* Yellow tilted sticker */
+.sticker-card {
+  background: var(--yellow);
+  color: var(--ink);
+  transform: rotate(var(--sticker-rotate));
+  font-family: var(--font-label);
+  font-weight: 700;
 }
