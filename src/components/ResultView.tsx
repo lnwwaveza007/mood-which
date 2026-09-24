@@ -86,7 +86,7 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
     const shareData = {
       title: `Chibi ประจำตัวของฉันคือ "${mood.chibiName}" (${mood.chibiTitle})`,
       text: `วันนี้ฉันคือ ${mood.chibiName} ✨ เมนูแซนด์วิชที่แนะนำ: ${mood.sandwichPairingTip} 🥪 ลองมาค้นหา Chibi อารมณ์ของคุณกันเลย! ${mood.hashtag}`,
-      url: typeof window !== 'undefined' ? window.location.href : 'https://mood-sandwiches.vercel.app',
+      url: typeof window !== 'undefined' ? window.location.href : 'https://mood-which.vercel.app',
     };
 
     if (navigator.share) {
@@ -105,7 +105,7 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
 
   // One-click Copy Caption & Hashtags
   const handleCopyCaption = () => {
-    const captionText = `วันนี้ Chibi ประจำตัวฉันคือ: ${mood.chibiName} ${mood.emoji}\n"${mood.chibiTitle}"\n[${mood.mixLabelTh}]\n\n🥪 เมนูแซนด์วิชประจำอารมณ์: ${mood.sandwichPairingTip}\n\nคำทำนายประจำวัน: "${mood.prophecy}"\n\nลองมาค้นหา Chibi ประจำอารมณ์ของคุณดูสิ!\n${mood.hashtag} #MoodChibi #12MoodSandwiches #InsideOutVibe`;
+    const captionText = `วันนี้ Chibi ประจำตัวฉันคือ: ${mood.chibiName} ${mood.emoji}\n"${mood.chibiTitle}"\n[${mood.mixLabelTh}]\n\n🥪 เมนูแซนด์วิชประจำอารมณ์: ${mood.sandwichPairingTip}\n\nคำทำนายประจำวัน: "${mood.prophecy}"\n\nลองมาค้นหา Chibi ประจำอารมณ์ของคุณดูสิ!\n${mood.hashtag} #MoodChibi #MoodWhich`;
 
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(captionText);

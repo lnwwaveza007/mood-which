@@ -85,10 +85,10 @@ export default function Home() {
           </div>
           <div>
             <h1 className="text-sm font-black text-white tracking-tight leading-none">
-              12 Mood Chibi & Sandwiches
+              Mood W(h)ich
             </h1>
             <p className="text-[10px] text-[#FFE94D]/70 font-medium">
-              Inside-Out Mood Quiz
+              แซนด์วิชคิดตามอารมณ์
             </p>
           </div>
         </div>
@@ -293,7 +293,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="w-full max-w-2xl mx-auto px-4 py-4 text-center border-t border-white/10 text-white/40 text-[11px]">
-        <p>© 2026 12 Mood Chibi & Sandwiches. All rights reserved.</p>
+        <p>© 2026 Mood W(h)ich. All rights reserved.</p>
         <p className="mt-0.5 text-white/30">
           Crafted with Next.js, Tailwind CSS & Framer Motion for Viral Sharing
         </p>

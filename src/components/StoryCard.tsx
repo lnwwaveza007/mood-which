@@ -12,7 +12,7 @@ interface StoryCardProps {
 }
 
 export const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(
-  ({ mood, shareUrl = 'https://mood-sandwiches.vercel.app' }, ref) => {
+  ({ mood, shareUrl = 'https://mood-which.vercel.app' }, ref) => {
     return (
       <div
         ref={ref}
@@ -54,7 +54,7 @@ export const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(
                 12 MOOD CHIBI × SANDWICH
               </h4>
               <p className="text-[9.5px] text-white/50 font-medium">
-                Inside-Out Mood Sandwiches Quiz
+                Mood W(h)ich Quiz
               </p>
             </div>
           </div>
@@ -178,7 +178,7 @@ export const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(
                 <span className="text-[10px]">👉</span>
               </p>
               <p className="text-[9px] text-white/50 font-medium leading-tight">
-                เล่นฟรีได้ที่: mood-sandwiches.vercel.app
+                เล่นฟรีได้ที่: mood-which.vercel.app
               </p>
               <p className="text-[8.5px] text-[#FFE94D] font-bold mt-0.5">
                 {mood.hashtag}

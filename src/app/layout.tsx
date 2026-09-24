@@ -43,28 +43,28 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "แซนด์วิชคิดตามอารมณ์ • Mood Sandwiches Quiz",
+  title: "Mood W(h)ich • แซนด์วิชคิดตามอารมณ์",
   description:
     "ค้นหาแซนด์วิชตามอารมณ์ประจำวันผ่านคำถามสั้น ๆ 4 ข้อ พร้อมรับคำทำนายและ Story Card ขนาด 9:16 สุดคิ้วท์สำหรับแชร์ลง IG และ TikTok",
   keywords: [
     "แซนด์วิชคิดตามอารมณ์",
-    "Mood Sandwiches",
+    "Mood W(h)ich",
     "แบบทดสอบทายใจ",
     "Quiz",
     "IG Story Quiz",
     "คำทำนายประจำวัน",
   ],
   openGraph: {
-    title: "แซนด์วิชคิดตามอารมณ์ • Mood Sandwiches Quiz",
+    title: "Mood W(h)ich • แซนด์วิชคิดตามอารมณ์",
     description:
       "วันนี้คุณรู้สึกแบบไหน? ค้นหาแซนด์วิชตามอารมณ์ของคุณ พร้อมคำทำนายและการ์ดแชร์ลง Instagram Story",
-    siteName: "แซนด์วิชคิดตามอารมณ์",
+    siteName: "Mood W(h)ich",
     locale: "th_TH",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "แซนด์วิชคิดตามอารมณ์ • Mood Sandwiches Quiz",
+    title: "Mood W(h)ich • แซนด์วิชคิดตามอารมณ์",
     description: "ค้นหาแซนด์วิชตามอารมณ์ประจำวัน พร้อมแชร์การ์ดลง IG Story",
   },
 };
