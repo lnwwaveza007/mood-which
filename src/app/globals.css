@@ -1,40 +1,60 @@
 @import "tailwindcss";
 
-/* ── MOOD-wich Design System Tokens ───────────────────────────────── */
+/* ── MoodWhich Design System Tokens (from the GEN351 poster) ──────── */
 :root {
-  --blue:   #1F41A8;
-  --yellow: #FFE94D;
-  --ink:    #0D0D0D;
-  --white:  #FFFFFF;
-  --red:    #E5322D;
+  --blue:      #0B46AE;
+  --blue-deep: #06307F;
+  --yellow:    #FFE83B;
+  --ink:       #0D0D0D;
+  --white:     #FFFFFF;
+  --red:       #E5322D;
+
+  /* 4 moods · 4 colours */
+  --mood-happy:  #FFE83B;
+  --mood-boring: #7ED957;
+  --mood-angry:  #FF8BAE;
+  --mood-sad:    #8EB2D9;
 
   --background: var(--blue);
   --foreground: var(--white);
 
   --font-display: var(--font-abril), "Abril Fatface", serif;
-  --font-thai:    var(--font-anuphan), "Anuphan", sans-serif;
-  --font-price:   var(--font-kanit), "Kanit", sans-serif;
-  --font-label:   var(--font-poppins), "Poppins", sans-serif;
-
-  --margin:         4vw;
-  --sticker-rotate: -6deg;
-  --bar-pad:        6px 10px;
-  --outline:        4px solid #fff;
+  --font-tape:    var(--font-chonburi), "Chonburi", serif;
+  --font-thai:    var(--font-kanit), "Kanit", sans-serif;
+  --font-label:   var(--font-poppins), var(--font-kanit), sans-serif;
 }
 
 /* ── Tailwind theme wiring ───────────────────────────────────────── */
 @theme inline {
   --color-background: var(--background);
-  --color-foreground:  var(--foreground);
-  --color-blue:        var(--blue);
-  --color-yellow:      var(--yellow);
-  --color-ink:         var(--ink);
-  --color-alert:       var(--red);
+  --color-foreground: var(--foreground);
+  --color-blue:       var(--blue);
+  --color-blue-deep:  var(--blue-deep);
+  --color-yellow:     var(--yellow);
+  --color-ink:        var(--ink);
+  --color-alert:      var(--red);
+  --color-mood-happy:  var(--mood-happy);
+  --color-mood-boring: var(--mood-boring);
+  --color-mood-angry:  var(--mood-angry);
+  --color-mood-sad:    var(--mood-sad);
 
   --font-sans:    var(--font-thai);
   --font-display: var(--font-display);
-  --font-price:   var(--font-price);
+  --font-tape:    var(--font-tape);
   --font-label:   var(--font-label);
+
+  --animate-float: float 4s ease-in-out infinite;
+  --animate-twinkle: twinkle 2.4s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 0 -10px; }
+}
+
+@keyframes twinkle {
+  0%, 100% { scale: 1; opacity: 1; }
+  50%      { scale: 0.7; opacity: 0.6; }
 }
 
 /* ── Base styles ─────────────────────────────────────────────────── */
@@ -46,49 +66,97 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-label), var(--font-thai);
+/* Poster backdrop: soft centre glow + dust & scratches */
+.poster-bg {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--blue);
+  background-image: url("/texture/speckle.svg");
+  background-size: 480px 480px;
 }
-
-/* ── Grain texture overlay ───────────────────────────────────────── */
-body::before {
+.poster-bg::before {
   content: "";
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: -1;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
-  background-repeat: repeat;
+  background:
+    radial-gradient(ellipse 60% 45% at 50% 38%, rgba(120, 190, 170, 0.35), transparent 70%),
+    radial-gradient(ellipse 90% 70% at 50% 110%, rgba(3, 30, 90, 0.55), transparent 70%);
 }
+/* On the page itself the glow stays put while you scroll */
+body.poster-bg::before { position: fixed; }
 
 /* ── Scrollbar ───────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 233, 77, 0.3);
+  background: rgba(255, 232, 59, 0.35);
   border-radius: 9999px;
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(255, 233, 77, 0.5); }
 
-/* ── Design system utility helpers ──────────────────────────────── */
+/* ── Poster helpers ──────────────────────────────────────────────── */
 
-/* Black label bar */
-.label-bar {
-  background: var(--ink);
-  color: var(--white);
-  padding: var(--bar-pad);
-  font-family: var(--font-label);
-  font-weight: 600;
+/* Huge yellow fat-face headline: MOOD / HIGHLIGHTS / GOALS */
+.display-title {
+  font-family: var(--font-display);
+  color: var(--yellow);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.6875rem;
+  line-height: 0.82;
+  letter-spacing: -0.01em;
 }
 
-/* Yellow tilted sticker */
-.sticker-card {
+/* Yellow tilted tape label: "อาหาร · แซนด์วิชพร้อมทาน (Grab & Go)" */
+.tape {
+  display: inline-block;
   background: var(--yellow);
   color: var(--ink);
-  transform: rotate(var(--sticker-rotate));
-  font-family: var(--font-label);
+  font-family: var(--font-tape);
+  padding: 0.3em 0.75em 0.35em;
+  rotate: -2deg;
+  line-height: 1.35;
+}
+
+/* Black highlighter bar behind body text, wraps line by line */
+.ink-bar {
+  background: var(--ink);
+  color: var(--white);
+  padding: 0.12em 0.4em;
+  line-height: 1.75;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Small black label chip on mood cards: "เฉย ๆ" / "เศร้า" */
+.label-chip {
+  display: inline-block;
+  background: var(--ink);
+  color: var(--white);
   font-weight: 700;
+  padding: 0.15em 0.55em;
+}
+
+/* Chunky sticker button with offset ink shadow */
+.btn-sticker {
+  background: var(--yellow);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-sticker:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 var(--ink); }
+.btn-sticker:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0 var(--ink); }
+
+/* Jagged promotion starburst */
+.burst {
+  clip-path: polygon(
+    50% 0%, 57% 9%, 67% 3%, 71% 14%, 82% 11%, 82% 22%, 93% 23%, 89% 34%, 99% 39%, 92% 48%,
+    100% 55%, 91% 62%, 96% 72%, 85% 75%, 86% 87%, 75% 86%, 71% 97%, 61% 91%, 54% 100%, 46% 92%,
+    37% 99%, 32% 88%, 21% 91%, 19% 80%, 8% 79%, 11% 68%, 1% 62%, 8% 53%, 0% 45%, 9% 38%,
+    4% 27%, 15% 24%, 15% 12%, 26% 14%, 30% 3%, 40% 9%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float, .animate-twinkle { animation: none; }
 }
