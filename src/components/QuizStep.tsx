@@ -1,9 +1,12 @@
 'use client';
 
 import React from 'react';
-import { QuizQuestion } from '@/data/quizData';
+import { FundamentalMood, QuizQuestion } from '@/data/quizData';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Check } from 'lucide-react';
+import ChibiSticker from './ChibiSticker';
+import { Sparkle } from './Decor';
+import { sfx } from '@/lib/sound';
 
 interface QuizStepProps {
   question: QuizQuestion;
@@ -14,6 +17,11 @@ interface QuizStepProps {
   onBack: () => void;
 }
 
+// A different chibi keeps you company on each question.
+const STEP_CHIBI: FundamentalMood[] = ['happy', 'boring', 'angry', 'sad'];
+
+// Fills exactly the viewport height it is given (no page scroll). Height variants:
+// `short:` drops option sub-labels, `compact:` / `tiny:` shrink spacing and extra text.
 export default function QuizStep({
   question,
   currentStepIndex,
@@ -22,78 +30,78 @@ export default function QuizStep({
   onSelectOption,
   onBack,
 }: QuizStepProps) {
-  const progress = ((currentStepIndex + 1) / totalSteps) * 100;
+  const chibi = STEP_CHIBI[currentStepIndex % STEP_CHIBI.length];
 
   return (
-    <div className="w-full max-w-lg mx-auto flex flex-col min-h-[580px] justify-between p-4 sm:p-6 relative z-[1]">
-      {/* Top Header & Progress */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <button
-            onClick={onBack}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/60 hover:text-white transition-colors py-1.5 px-3 rounded-full hover:bg-white/10 active:scale-95 cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>{currentStepIndex === 0 ? 'หน้าแรก' : 'ข้อก่อนหน้า'}</span>
-          </button>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-[#0D0D0D] bg-[#FFE94D] px-2.5 py-1 rounded-full border border-[#FFE94D]">
-              ข้อที่ {currentStepIndex + 1} / {totalSteps}
-            </span>
-          </div>
-        </div>
-
-        {/* Animated Progress Bar */}
-        <div className="w-full bg-white/10 h-2.5 rounded-full overflow-hidden mb-6 p-0.5 border border-white/10 shadow-inner">
-          <motion.div
-            className="h-full bg-[#FFE94D] rounded-full"
-            initial={{ width: `${(currentStepIndex / totalSteps) * 100}%` }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
-          />
-        </div>
-
-        {/* Question Header Card */}
-        <motion.div
-          key={`q-${question.id}`}
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -15 }}
-          transition={{ duration: 0.3 }}
-          className="text-left mb-6"
+    <div className="w-full h-full max-w-xl mx-auto flex flex-col px-4 sm:px-6 pt-2 pb-4 tiny:pb-3">
+      {/* Top bar */}
+      <div className="flex items-center justify-between mb-2">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-white/80 hover:text-yellow transition-colors py-1 cursor-pointer"
         >
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0D0D0D] text-[#FFE94D] border border-[#FFE94D]/30 text-[11px] font-bold tracking-wide mb-2.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#FFE94D]" />
-            <span>{question.badge}</span>
-          </div>
-
-          <h2 className="text-xl sm:text-2xl font-black text-white leading-snug tracking-tight">
-            {question.title}
-          </h2>
-          <p className="text-xs sm:text-sm text-white/60 font-medium mt-1">
-            {question.subtitle}
-          </p>
-        </motion.div>
+          <ArrowLeft className="w-4 h-4" />
+          <span>{currentStepIndex === 0 ? 'หน้าแรก' : 'ข้อก่อนหน้า'}</span>
+        </button>
+        <span className="font-label font-bold text-sm text-yellow tracking-wider">
+          {String(currentStepIndex + 1).padStart(2, '0')} / {String(totalSteps).padStart(2, '0')}
+        </span>
       </div>
 
-      {/* Options List */}
+      {/* Segmented progress */}
+      <div className="grid gap-1.5 mb-5 compact:mb-3" style={{ gridTemplateColumns: `repeat(${totalSteps}, 1fr)` }}>
+        {Array.from({ length: totalSteps }).map((_, i) => (
+          <div key={i} className="h-2 rounded-full bg-white/15 overflow-hidden">
+            <motion.div
+              className="h-full bg-yellow"
+              initial={false}
+              animate={{ width: i <= currentStepIndex ? '100%' : '0%' }}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Question */}
+      <motion.div
+        key={`q-${question.id}`}
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="relative shrink-0 mb-4 compact:mb-3 pr-24 sm:pr-28 tiny:pr-16"
+      >
+        <div className="flex items-center gap-2 mb-2 tiny:mb-1">
+          <span className="display-title text-5xl compact:text-4xl tiny:text-3xl">Q{question.questionNumber}</span>
+          <Sparkle className="w-6 compact:w-5 animate-twinkle" />
+        </div>
+        <p className="tape text-sm sm:text-base compact:text-xs mb-3 compact:mb-2">{question.badge}</p>
+        <h2 className="text-xl sm:text-2xl compact:text-lg tiny:text-base font-bold leading-snug">{question.title}</h2>
+        <p className="mt-2 text-xs sm:text-sm compact:hidden">
+          <span className="ink-bar">{question.subtitle}</span>
+        </p>
+
+        <motion.div
+          key={chibi}
+          initial={{ opacity: 0, x: 20, rotate: 8 }}
+          animate={{ opacity: 1, x: 0, rotate: 6 }}
+          className="absolute -top-2 right-0"
+        >
+          <ChibiSticker moods={[chibi]} heightClass="h-32 sm:h-40 compact:h-24 tiny:h-16" eager />
+        </motion.div>
+      </motion.div>
+
+      {/* Options take the remaining height */}
       <motion.div
         key={`opts-${question.id}`}
         initial="hidden"
         animate="visible"
         variants={{
           hidden: { opacity: 0 },
-          visible: {
-            opacity: 1,
-            transition: {
-              staggerChildren: 0.08,
-            },
-          },
+          visible: { opacity: 1, transition: { staggerChildren: 0.07 } },
         }}
-        className="space-y-3 my-2"
+        className="flex-1 min-h-0 flex flex-col justify-center gap-3 compact:gap-2.5 tiny:gap-2 pr-1.5 pb-1.5"
       >
-        {question.options.map((option) => {
+        {question.options.map((option, index) => {
           const isSelected = selectedOptionId === option.id;
 
           return (
@@ -103,63 +111,45 @@ export default function QuizStep({
                 hidden: { opacity: 0, y: 12 },
                 visible: { opacity: 1, y: 0 },
               }}
-              whileHover={{ scale: 1.015, y: -2 }}
-              whileTap={{ scale: 0.985 }}
-              onClick={() => onSelectOption(option.id)}
-              className={`w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 transition-all duration-200 flex items-start gap-3.5 relative overflow-hidden group cursor-pointer ${
-                isSelected
-                  ? 'border-[#FFE94D] bg-[#FFE94D]/10 shadow-md ring-2 ring-[#FFE94D]/30'
-                  : 'border-white/20 bg-white/5 hover:border-[#FFE94D]/50 hover:bg-[#FFE94D]/5 shadow-xs'
+              whileHover={{ x: -2, y: -2 }}
+              whileTap={{ x: 2, y: 2 }}
+              onClick={() => {
+                sfx.select(index);
+                onSelectOption(option.id);
+              }}
+              className={`w-full text-left p-4 compact:p-2.5 tiny:py-2 rounded-2xl border-[3px] border-ink flex items-center gap-3 compact:gap-2.5 text-ink cursor-pointer transition-[background-color,box-shadow] ${
+                isSelected ? 'bg-yellow shadow-[2px_2px_0_#0D0D0D]' : 'bg-white shadow-[5px_5px_0_#0D0D0D] hover:bg-[#FFF8C9]'
               }`}
             >
-              {/* Emoji Icon Container */}
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 transition-transform duration-200 group-hover:scale-110 ${
-                  isSelected ? 'bg-[#FFE94D] text-[#0D0D0D] shadow-xs' : 'bg-white/10 text-white'
+              <span
+                className={`w-11 h-11 compact:w-9 compact:h-9 tiny:w-8 tiny:h-8 rounded-xl flex items-center justify-center text-2xl compact:text-xl tiny:text-lg flex-shrink-0 border-2 border-ink ${
+                  isSelected ? 'bg-white' : 'bg-yellow'
                 }`}
               >
                 {option.emoji}
-              </div>
-
-              {/* Option Text */}
-              <div className="flex-1 pr-6">
-                <p
-                  className={`text-sm sm:text-base font-bold leading-snug tracking-tight ${
-                    isSelected ? 'text-[#FFE94D]' : 'text-white'
-                  }`}
-                >
+              </span>
+              <span className="flex-1">
+                <span className="block text-sm sm:text-base compact:text-sm tiny:text-[13px] font-bold leading-snug">
                   {option.label}
-                </p>
+                </span>
                 {option.subLabel && (
-                  <p className="text-xs text-white/50 font-normal mt-0.5 leading-relaxed">
+                  <span className="block text-xs text-ink/60 mt-0.5 leading-relaxed short:hidden">
                     {option.subLabel}
-                  </p>
+                  </span>
                 )}
-              </div>
-
-              {/* Checkmark Indicator */}
-              <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
-                <div
-                  className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all ${
-                    isSelected
-                      ? 'border-[#FFE94D] bg-[#FFE94D] text-[#0D0D0D]'
-                      : 'border-white/30 bg-transparent text-transparent group-hover:border-white/60'
-                  }`}
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                </div>
-              </div>
+              </span>
+              <span
+                className={`w-6 h-6 compact:w-5 compact:h-5 rounded-full border-2 border-ink flex items-center justify-center flex-shrink-0 ${
+                  isSelected ? 'bg-ink text-yellow' : 'bg-transparent text-transparent'
+                }`}
+              >
+                <Check className="w-4 h-4 compact:w-3 compact:h-3" strokeWidth={3} />
+              </span>
             </motion.button>
           );
         })}
       </motion.div>
 
-      {/* Helper Footer */}
-      <div className="text-center pt-4">
-        <p className="text-[11px] text-white/40 font-medium">
-          แตะตัวเลือกที่ตรงกับความรู้สึกของคุณมากที่สุด ✨
-        </p>
-      </div>
     </div>
   );
 }

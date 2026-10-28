@@ -1,201 +1,93 @@
 'use client';
 
 import React, { forwardRef } from 'react';
-import { MoodProfile } from '@/data/quizData';
-import SandwichIllustration from './SandwichIllustration';
+import { BASE_SANDWICH_FILLINGS, MoodProfile } from '@/data/quizData';
+import { sandwichMoods, sandwichBackground } from '@/data/sandwich';
+import ChibiSticker from './ChibiSticker';
+import { Sparkle, GooglyEyes, PromoBurst, InstagramIcon } from './Decor';
 import { QRCodeSVG } from 'qrcode.react';
-import { Sparkles, Heart, Zap, Utensils } from 'lucide-react';
 
 interface StoryCardProps {
   mood: MoodProfile;
   shareUrl?: string;
 }
 
+// 450×800 (9:16) poster-style card captured to PNG for IG Story.
 export const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(
   ({ mood, shareUrl = 'https://mood-which.vercel.app' }, ref) => {
+    const menuMoods = sandwichMoods(mood);
+
     return (
       <div
         ref={ref}
         id="story-card"
-        style={{
-          width: '450px',
-          height: '800px',
-          backgroundColor: mood.secondaryColor,
-        }}
-        className="relative overflow-hidden flex flex-col justify-between p-6 select-none text-white shadow-2xl font-sans rounded-none"
+        style={{ width: '450px', height: '800px' }}
+        className="poster-bg relative overflow-hidden flex flex-col px-7 pt-6 pb-6 select-none text-white font-sans"
       >
-        {/* Background ambient glow */}
-        <div
-          className="absolute -top-20 -right-20 w-72 h-72 rounded-full blur-3xl opacity-60 pointer-events-none"
-          style={{ backgroundColor: mood.primaryColor }}
-        />
-        <div
-          className="absolute -bottom-16 -left-16 w-72 h-72 rounded-full blur-3xl opacity-50 pointer-events-none"
-          style={{ backgroundColor: mood.primaryColor }}
-        />
+        {/* Poster top line */}
+        <div className="flex items-center justify-between font-label text-[10px] font-semibold tracking-[0.14em] text-yellow">
+          <span>SECTION 8 · GROUP 8</span>
+          <span className="font-sans tracking-normal">แซนวิชตามอารมณ์</span>
+        </div>
 
-        {/* Corner Accents */}
-        <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-white/30 rounded-tl pointer-events-none" />
-        <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-white/30 rounded-tr pointer-events-none" />
-        <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-white/30 rounded-bl pointer-events-none" />
-        <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-white/30 rounded-br pointer-events-none" />
+        <div className="display-title text-[68px] text-center mt-3">
+          <span className="block">MOOD</span>
+          <span className="block">WHICH</span>
+        </div>
 
-        {/* --- HEADER --- */}
-        <div className="relative z-10 flex items-center justify-between border-b border-white/15 pb-2.5">
-          <div className="flex items-center gap-2">
-            <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold shadow-xs text-sm"
-              style={{ backgroundColor: mood.accentColor }}
-            >
-              ✨
-            </div>
-            <div>
-              <h4 className="text-xs font-extrabold tracking-wider uppercase text-white">
-                12 MOOD CHIBI × SANDWICH
-              </h4>
-              <p className="text-[9.5px] text-white/50 font-medium">
-                Mood W(h)ich Quiz
-              </p>
-            </div>
-          </div>
+        {/* Chibi + mood name */}
+        <div className="relative flex-1 min-h-0 flex flex-col items-center justify-center -mt-2">
+          <Sparkle className="absolute left-2 top-6 w-8" />
+          <Sparkle className="absolute right-4 top-24 w-5" />
           <div
-            className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide flex items-center gap-1 shadow-xs border"
-            style={{
-              backgroundColor: mood.primaryColor,
-              color: '#18181B',
-              borderColor: mood.accentColor,
-            }}
+            className="absolute inset-x-16 top-6 bottom-20 rounded-full blur-3xl opacity-50"
+            style={{ background: sandwichBackground(menuMoods) }}
+          />
+          <ChibiSticker mood={mood.id} heightClass="h-[190px]" forCapture className="relative" />
+          <div className="relative -mt-4 flex flex-col items-center">
+            <GooglyEyes className="absolute -top-7 -right-6 w-11 rotate-6" />
+            <p className="tape text-[26px] -rotate-3">{mood.chibiName}</p>
+          </div>
+          <p className="mt-2 text-[12px] font-semibold text-white/90">{mood.mixLabelTh}</p>
+        </div>
+
+        {/* Menu card */}
+        <div className="relative">
+          <div
+            className="rounded-2xl px-4 py-3 text-ink border-[3px] border-ink"
+            style={{ background: sandwichBackground(menuMoods) }}
           >
-            <Sparkles className="w-3 h-3 text-zinc-900" />
-            <span>{mood.titleEn}</span>
+            <span className="label-chip text-[11px]">เมนูของฉันวันนี้</span>
+            <p className="mt-1.5 text-[16px] font-black leading-snug pr-20">{mood.sandwichName}</p>
+            {menuMoods.map((m) => (
+              <p key={m} className="text-[11px] font-medium leading-snug">
+                {BASE_SANDWICH_FILLINGS[m].emoji} {BASE_SANDWICH_FILLINGS[m].nameTh}
+              </p>
+            ))}
           </div>
+          <PromoBurst className="absolute -top-9 -right-4 w-[92px] text-[8px] rotate-12" />
         </div>
 
-        {/* --- MAIN CONTENT & CHIBI MASCOT --- */}
-        <div className="relative z-10 flex flex-col items-center text-center my-auto">
-          {/* Chibi Character Badge */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0D0D0D]/70 backdrop-blur-md shadow-xs border border-[#FFE94D]/30 mb-1">
-            <span className="text-sm">{mood.emoji}</span>
-            <span className="text-xs font-bold text-[#FFE94D]">
-              {mood.mixLabelTh}
-            </span>
+        <p className="mt-4 text-[11px] leading-relaxed line-clamp-4">
+          <span className="ink-bar">&ldquo;{mood.prophecy}&rdquo;</span>
+        </p>
+
+        {/* Footer: QR + IG + date */}
+        <div className="mt-4 flex items-center gap-3">
+          <div className="bg-white p-1.5 rounded-lg border-2 border-ink flex-shrink-0">
+            <QRCodeSVG value={shareUrl} size={52} level="M" fgColor="#0D0D0D" bgColor="#FFFFFF" />
           </div>
-
-          {/* Chibi Character Name */}
-          <h2 className="text-2xl font-black text-white leading-tight tracking-tight mt-0.5">
-            {mood.chibiName}
-          </h2>
-          <p className="text-[11px] font-bold text-zinc-600 tracking-wide" style={{ color: mood.accentColor }}>
-            {mood.chibiTitle}
-          </p>
-
-          {/* Chibi Mascot Illustration */}
-          <div className="my-1 transform transition-transform hover:scale-105 duration-300">
-            <SandwichIllustration mood={mood.id} size="story" />
-          </div>
-
-          {/* Sandwich Duo Match Order Callout */}
-          <div className="w-full bg-[#0D0D0D]/50 backdrop-blur-md rounded-2xl p-2.5 shadow-sm border border-[#FFE94D]/30 text-left mb-2">
-            <div className="flex items-center gap-1 text-[10.5px] font-black text-[#FFE94D] mb-0.5">
-              <Utensils className="w-3 h-3 text-[#FFE94D]" />
-              <span>เมนูแซนด์วิชที่ตรงกับ Chibi ของคุณ:</span>
-            </div>
-            <p className="text-[11px] font-bold text-white pl-1">
-              🥪 {mood.sandwichPairingTip}
+          <div className="flex-1 min-w-0">
+            <p className="font-tape text-yellow text-[12px] leading-tight">สแกนหาแซนวิชตามอารมณ์คุณ</p>
+            <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-ink px-2.5 py-1 text-yellow text-[11px] font-semibold">
+              <InstagramIcon className="w-3.5 h-3.5 text-white" />
+              @moodwhich.kmuttnative
             </p>
           </div>
-
-          {/* Prophecy / Daily Fortune Card */}
-          <div className="w-full bg-[#0D0D0D]/50 backdrop-blur-md rounded-2xl p-3 shadow-sm border border-white/15 text-left relative overflow-hidden">
-            <div
-              className="absolute top-0 left-0 w-1.5 h-full"
-              style={{ backgroundColor: mood.primaryColor }}
-            />
-            <div className="flex items-center gap-1.5 mb-0.5 text-[10.5px] font-bold text-[#FFE94D]">
-              <Sparkles className="w-3 h-3 text-[#FFE94D]" />
-              <span>คำทำนายประจำวันของคุณ ✨</span>
-            </div>
-            <p className="text-[11px] text-white/80 font-normal leading-relaxed pl-1">
-              &ldquo;{mood.prophecy}&rdquo;
-            </p>
-          </div>
-
-          {/* Energy & Comfort Stats Bar */}
-          <div className="grid grid-cols-2 gap-2 w-full mt-2">
-            <div className="bg-[#0D0D0D]/40 backdrop-blur-xs rounded-xl p-1.5 border border-white/10 flex items-center gap-2">
-              <div className="p-1 rounded-lg bg-[#FFE94D]/20 text-[#FFE94D]">
-                <Zap className="w-3 h-3" />
-              </div>
-              <div className="flex-1 text-left">
-                <div className="flex justify-between text-[8.5px] font-bold text-white/70">
-                  <span>พลังงาน (Energy)</span>
-                  <span>{mood.energyLevel}%</span>
-                </div>
-                <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden mt-0.5">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${mood.energyLevel}%`, backgroundColor: mood.primaryColor }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-[#0D0D0D]/40 backdrop-blur-xs rounded-xl p-1.5 border border-white/10 flex items-center gap-2">
-              <div className="p-1 rounded-lg bg-[#E5322D]/20 text-[#E5322D]">
-                <Heart className="w-3 h-3" />
-              </div>
-              <div className="flex-1 text-left">
-                <div className="flex justify-between text-[8.5px] font-bold text-white/70">
-                  <span>ความฮีลใจ (Comfort)</span>
-                  <span>{mood.comfortLevel}%</span>
-                </div>
-                <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden mt-0.5">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${mood.comfortLevel}%`, backgroundColor: mood.accentColor }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* --- FOOTER & QR CODE --- */}
-        <div className="relative z-10 bg-[#0D0D0D]/60 backdrop-blur-md rounded-2xl p-2.5 flex items-center justify-between border border-[#FFE94D]/20 shadow-md">
-          <div className="flex items-center gap-2.5">
-            <div className="bg-white p-1 rounded-xl shadow-xs border border-[#FFE94D]/30 flex-shrink-0">
-              <QRCodeSVG
-                value={shareUrl}
-                size={44}
-                level="M"
-                fgColor="#18181B"
-                bgColor="#FFFFFF"
-              />
-            </div>
-            <div className="text-left">
-              <p className="text-[10.5px] font-black text-white tracking-tight flex items-center gap-1">
-                <span>สแกนค้นหา Chibi ของคุณ</span>
-                <span className="text-[10px]">👉</span>
-              </p>
-              <p className="text-[9px] text-white/50 font-medium leading-tight">
-                เล่นฟรีได้ที่: mood-which.vercel.app
-              </p>
-              <p className="text-[8.5px] text-[#FFE94D] font-bold mt-0.5">
-                {mood.hashtag}
-              </p>
-            </div>
-          </div>
-
-          <div className="text-right flex flex-col items-end">
-            <span className="text-[8.5px] uppercase tracking-wider font-extrabold text-white/40">
-              CHIBI EDITION
-            </span>
-            <div
-              className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow-xs mt-0.5"
-              style={{ backgroundColor: mood.accentColor }}
-            >
-              ★
-            </div>
+          <div className="text-right leading-none">
+            <p className="display-title text-[30px]">12</p>
+            <p className="display-title text-[22px]">NOV</p>
+            <p className="text-[9px] font-bold mt-1">9.30-12.00</p>
           </div>
         </div>
       </div>

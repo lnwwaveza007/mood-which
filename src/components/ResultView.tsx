@@ -1,26 +1,16 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
-import { MoodProfile } from '@/data/quizData';
-import SandwichIllustration from './SandwichIllustration';
+import { BASE_SANDWICH_FILLINGS, MoodProfile } from '@/data/quizData';
+import { sandwichMoods, sandwichBackground } from '@/data/sandwich';
+import ChibiSticker from './ChibiSticker';
 import StoryCard from './StoryCard';
+import { Sparkle, PromoBurst, InstagramIcon } from './Decor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toPng } from 'html-to-image';
 import confetti from 'canvas-confetti';
-import {
-  Download,
-  Share2,
-  Copy,
-  RotateCcw,
-  Sparkles,
-  Coffee,
-  Check,
-  Eye,
-  Camera,
-  Layers,
-  ShoppingBag,
-  Sparkle,
-} from 'lucide-react';
+import { sfx } from '@/lib/sound';
+import { Download, Share2, Copy, RotateCcw, Sparkles, Coffee, Check, Eye, Camera } from 'lucide-react';
 
 interface ResultViewProps {
   mood: MoodProfile;
@@ -34,6 +24,9 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showStoryPreview, setShowStoryPreview] = useState(false);
 
+  const menuMoods = sandwichMoods(mood);
+  const isMix = menuMoods.length > 1;
+
   // Trigger celebration confetti on mount
   useEffect(() => {
     try {
@@ -41,7 +34,7 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
         particleCount: 90,
         spread: 80,
         origin: { y: 0.6 },
-        colors: [mood.primaryColor, mood.accentColor, '#FFD043', '#FF85A1', '#38BDF8'],
+        colors: ['#FFE83B', '#7ED957', '#FF8BAE', '#8EB2D9', '#FFFFFF'],
       });
     } catch {
       // Ignore in environments where canvas is unavailable
@@ -58,8 +51,9 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
   // Generate and Download Story PNG
   const handleDownloadStoryImage = async () => {
     if (!storyCardRef.current) return;
+    sfx.shutter();
     setIsGeneratingImage(true);
-    showToast('กำลังเนรมิต Story Card ขนาด 9:16 ความละเอียดสูง... 🎨');
+    showToast('กำลังสร้าง Story Card ขนาด 9:16...');
 
     try {
       const dataUrl = await toPng(storyCardRef.current, {
@@ -69,10 +63,10 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
       });
 
       const link = document.createElement('a');
-      link.download = `chibi-${mood.id}-${Date.now()}.png`;
+      link.download = `moodwhich-${mood.id}-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
-      showToast('บันทึกรูป Chibi Story สำเร็จแล้ว! พร้อมแชร์ลง IG / TikTok ได้เลย 📸✨');
+      showToast('บันทึกรูปแล้ว! แท็ก @moodwhich.kmuttnative ลง IG Story ลุ้นแซนวิชฟรี');
     } catch (err) {
       console.error('Failed to generate image', err);
       showToast('เกิดข้อผิดพลาดในการสร้างรูปภาพ กรุณาลองใหม่อีกครั้ง');
@@ -83,9 +77,10 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
 
   // Web Share API
   const handleNativeShare = async () => {
+    sfx.tap();
     const shareData = {
-      title: `Chibi ประจำตัวของฉันคือ "${mood.chibiName}" (${mood.chibiTitle})`,
-      text: `วันนี้ฉันคือ ${mood.chibiName} ✨ เมนูแซนด์วิชที่แนะนำ: ${mood.sandwichPairingTip} 🥪 ลองมาค้นหา Chibi อารมณ์ของคุณกันเลย! ${mood.hashtag}`,
+      title: `วันนี้อารมณ์ของฉันคือ "${mood.chibiName}"`,
+      text: `วันนี้ฉันคือ ${mood.chibiName} ${mood.emoji} เมนูที่ใช่: ${mood.sandwichName} 🥪 มาหาแซนวิชตามอารมณ์ของคุณกัน! ${mood.hashtag}`,
       url: typeof window !== 'undefined' ? window.location.href : 'https://mood-which.vercel.app',
     };
 
@@ -98,25 +93,26 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
     } else {
       if (typeof window !== 'undefined') {
         navigator.clipboard.writeText(window.location.href);
-        showToast('คัดลอกลิงก์แบบทดสอบแล้ว! นำไปแชร์ให้เพื่อน ๆ ได้เลย 🔗');
+        showToast('คัดลอกลิงก์แล้ว! ส่งให้เพื่อนได้เลย');
       }
     }
   };
 
   // One-click Copy Caption & Hashtags
   const handleCopyCaption = () => {
-    const captionText = `วันนี้ Chibi ประจำตัวฉันคือ: ${mood.chibiName} ${mood.emoji}\n"${mood.chibiTitle}"\n[${mood.mixLabelTh}]\n\n🥪 เมนูแซนด์วิชประจำอารมณ์: ${mood.sandwichPairingTip}\n\nคำทำนายประจำวัน: "${mood.prophecy}"\n\nลองมาค้นหา Chibi ประจำอารมณ์ของคุณดูสิ!\n${mood.hashtag} #MoodChibi #MoodWhich`;
+    const captionText = `วันนี้อารมณ์ของฉันคือ: ${mood.chibiName} ${mood.emoji}\n[${mood.mixLabelTh}]\n\n🥪 ${mood.sandwichName}\n\n"${mood.prophecy}"\n\nมาหาแซนวิชตามอารมณ์ของคุณที่ @moodwhich.kmuttnative\n${mood.hashtag} #MoodWhich`;
 
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(captionText);
+      sfx.ding();
       setCopiedCaption(true);
-      showToast('คัดลอกแคปชัน & แฮชแท็กเรียบร้อย! นำไปวางใน Story/โพสต์ได้เลย ✨');
+      showToast('คัดลอกแคปชันแล้ว! วางใน Story ได้เลย');
       setTimeout(() => setCopiedCaption(false), 3000);
     }
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto p-4 sm:p-6 text-white pb-16 relative z-[1]">
+    <div className="w-full max-w-xl mx-auto p-4 sm:p-6 pb-10 relative">
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
@@ -124,227 +120,195 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-[#0D0D0D]/90 backdrop-blur-md text-[#FFE94D] text-xs sm:text-sm font-semibold px-5 py-3 rounded-full shadow-2xl border border-[#FFE94D]/30 flex items-center gap-2 max-w-[90vw] text-center"
+            className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-ink text-yellow text-xs sm:text-sm font-semibold px-5 py-3 rounded-full shadow-2xl border-2 border-yellow flex items-center gap-2 max-w-[90vw] text-center"
           >
-            <Sparkles className="w-4 h-4 text-[#FFE94D] flex-shrink-0 animate-spin" />
+            <Sparkles className="w-4 h-4 flex-shrink-0" />
             <span>{toastMessage}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Main Result Card */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.94 }}
+      {/* ── Who you are today ─────────────────────────────── */}
+      <motion.section
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.45, ease: 'easeOut' }}
-        className="relative overflow-hidden rounded-3xl bg-white/5 backdrop-blur-sm shadow-xl border border-white/10 p-5 sm:p-7 text-center"
+        className="text-center"
       >
-        {/* Ambient Glow Header */}
-        <div
-          className="absolute -top-16 left-1/2 -translate-x-1/2 w-64 h-32 rounded-full blur-3xl opacity-40 pointer-events-none"
-          style={{ backgroundColor: mood.primaryColor }}
-        />
+        <p className="tape text-base sm:text-lg">อารมณ์ของคุณวันนี้คือ...</p>
 
-        {/* Top Mood Pill Badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0D0D0D] border border-[#FFE94D]/30 shadow-2xs mb-2">
-          <Layers className="w-3.5 h-3.5 text-[#FFE94D]" />
-          <span className="text-xs sm:text-sm font-bold text-[#FFE94D]">
-            {mood.mixLabelTh}
-          </span>
+        <div className="relative mt-4 flex justify-center">
+          <div
+            className="absolute inset-x-10 top-6 bottom-2 rounded-full blur-3xl opacity-60"
+            style={{ background: sandwichBackground(menuMoods) }}
+          />
+          <Sparkle className="absolute left-[8%] top-[12%] w-8 animate-twinkle" />
+          <Sparkle className="absolute right-[10%] top-[40%] w-5 animate-twinkle [animation-delay:1s]" />
+          <ChibiSticker mood={mood.id} heightClass="h-60 sm:h-72" float eager className="relative" />
         </div>
 
-        {/* Chibi Mascot Name & Title */}
-        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-tight">
+        <h1 className="mt-4 text-4xl sm:text-5xl font-black text-yellow leading-tight tracking-tight">
           {mood.chibiName}
         </h1>
-        <p className="text-xs sm:text-sm font-bold mt-1" style={{ color: mood.accentColor }}>
-          ✨ {mood.chibiTitle}
+        <p className="mt-1 text-sm sm:text-base font-semibold">{mood.chibiTitle}</p>
+        <p className="mt-3">
+          <span className="label-chip text-xs sm:text-sm">{mood.mixLabelTh}</span>
         </p>
-        <p className="text-xs text-white/50 font-medium mt-1 max-w-md mx-auto">
-          {mood.chibiDescription}
+        <p className="mt-4 text-sm max-w-md mx-auto">
+          <span className="ink-bar">{mood.chibiDescription}</span>
         </p>
+      </motion.section>
 
-        {/* Hero Chibi Illustration */}
-        <div className="my-2 flex justify-center transform transition-transform hover:scale-105 duration-300">
-          <SandwichIllustration mood={mood.id} size="lg" />
-        </div>
-
-        {/* Sandwich Promotion & Mix-and-Match Ordering Box */}
-        <div className="rounded-2xl p-4 sm:p-5 bg-[#FFE94D]/10 border-2 border-[#FFE94D]/40 text-left my-4 shadow-sm relative overflow-hidden">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="p-1.5 bg-[#FFE94D] text-[#0D0D0D] rounded-xl shadow-xs">
-              <ShoppingBag className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-black text-[#FFE94D] tracking-tight">
-                เมนูแซนด์วิชประจำอารมณ์ของคุณ (Order This!)
-              </h3>
-              <p className="text-[10.5px] text-white/60 font-medium">
-                ร้านเรามี 4 ไส้หลัก — คุณสามารถสั่งแบบ 1 ชิ้นไส้นึง อีกชิ้นอีกไส้นึงได้!
-              </p>
-            </div>
-          </div>
-
-          <div className="p-3 bg-white/10 rounded-xl border border-[#FFE94D]/20 shadow-2xs mt-2">
-            <p className="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
-              <span>🥪</span>
-              <span>{mood.sandwichPairingTip}</span>
-            </p>
-            <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-white/10 text-[11px] font-medium text-white/70">
-              <div className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#FFE94D] flex-shrink-0" />
-                <span>ชิ้นที่ 1: {mood.sandwichFilling1}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#E5322D] flex-shrink-0" />
-                <span>ชิ้นที่ 2: {mood.sandwichFilling2}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Prophecy Box */}
+      {/* ── Your sandwich ─────────────────────────────────── */}
+      <section className="relative mt-10">
         <div
-          className="rounded-2xl p-4 sm:p-5 text-left shadow-xs border relative overflow-hidden my-4"
-          style={{ backgroundColor: mood.secondaryColor, borderColor: mood.primaryColor }}
+          className="relative rounded-3xl p-5 sm:p-6 text-ink border-[3px] border-ink shadow-[6px_6px_0_#0D0D0D]"
+          style={{ background: sandwichBackground(menuMoods) }}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-xs"
-              style={{ backgroundColor: mood.accentColor }}
-            >
-              <Sparkle className="w-4 h-4" />
-            </div>
-            <h3 className="text-sm font-black text-white tracking-tight">
-              คำทำนาย & ข้อความฮีลใจจาก {mood.chibiName}
-            </h3>
+          <span className="label-chip text-sm">{isMix ? 'MIX 2 อารมณ์' : 'เมนูของคุณ'}</span>
+          <h2 className="mt-3 text-xl sm:text-2xl font-black leading-snug pr-24 sm:pr-28">{mood.sandwichName}</h2>
+          <div className="mt-4 space-y-2">
+            {menuMoods.map((m) => {
+              const base = BASE_SANDWICH_FILLINGS[m];
+              return (
+                <div key={m} className="flex items-start gap-2 bg-white/70 rounded-xl px-3 py-2">
+                  <span className="text-lg leading-none mt-0.5">{base.emoji}</span>
+                  <p className="text-sm font-semibold leading-snug">
+                    {base.breadTh} <span className="font-normal">· {base.nameTh}</span>
+                  </p>
+                </div>
+              );
+            })}
           </div>
-          <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
-            &ldquo;{mood.prophecy}&rdquo;
+          <p className="mt-3 text-xs sm:text-sm font-medium">{mood.fillingDesc}</p>
+          <div className="mt-4 flex items-end gap-2">
+            <span className="font-black text-5xl leading-none">35.-</span>
+            <span className="text-xs font-bold pb-1">/ ชิ้น</span>
+          </div>
+        </div>
+        <PromoBurst className="absolute -top-8 -right-3 w-28 sm:w-32 text-[10px] sm:text-xs rotate-12" />
+      </section>
+
+      {/* ── Prophecy ─────────────────────────────────────── */}
+      <section className="mt-6 rounded-3xl bg-ink p-5 sm:p-6 text-left">
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkle className="w-5" />
+          <h3 className="font-tape text-yellow text-base">คำทำนายวันนี้</h3>
+        </div>
+        <p className="text-sm sm:text-base leading-relaxed text-white/90">&ldquo;{mood.prophecy}&rdquo;</p>
+        <div className="mt-4 pt-4 border-t border-white/15 flex items-center gap-3">
+          <Coffee className="w-5 h-5 text-yellow flex-shrink-0" />
+          <p className="text-xs sm:text-sm text-white/80">
+            <span className="font-bold text-white">ดื่มคู่กัน:</span> {mood.bestPairDrink}
           </p>
         </div>
+      </section>
 
-        {/* Best Pairing Drink */}
-        <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-left flex items-center gap-3">
-          <div className="p-2 bg-[#FFE94D]/20 rounded-xl text-[#FFE94D]">
-            <Coffee className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-[11px] font-bold text-white">
-              เครื่องดื่มจับคู่เพิ่มพลัง (Best Pairing Drink)
-            </p>
-            <p className="text-xs text-white/60 font-medium mt-0.5">
-              {mood.bestPairDrink}
-            </p>
-          </div>
-        </div>
+      <div className="mt-5 flex flex-wrap justify-center gap-2">
+        {mood.flavorNotes.map((note, i) => (
+          <span key={i} className={`tape font-sans font-semibold text-xs ${i % 2 ? 'rotate-2' : '-rotate-2'}`}>
+            #{note}
+          </span>
+        ))}
+      </div>
 
-        {/* Flavor Tags */}
-        <div className="flex flex-wrap items-center justify-center gap-1.5 mt-4">
-          {mood.flavorNotes.map((note, i) => (
-            <span
-              key={i}
-              className="px-3 py-1 bg-white/10 rounded-full text-xs font-semibold text-white/70 border border-white/10"
-            >
-              #{note}
-            </span>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Action Buttons Section */}
-      <motion.div
+      {/* ── Share ─────────────────────────────────────────── */}
+      <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.4 }}
-        className="mt-6 space-y-3"
+        className="mt-10 space-y-4"
       >
-        {/* Primary IG Story Download Button */}
+        <div className="rounded-3xl border-2 border-dashed border-yellow/70 p-4 text-center">
+          <p className="font-tape text-yellow text-base sm:text-lg">แชะ & แท็ก ลุ้นฟรี!</p>
+          <p className="text-xs sm:text-sm text-white/85 mt-1">
+            ถ่ายรูปแซนวิชสีตามอารมณ์ลง IG Story แล้วแท็ก{' '}
+            <span className="font-semibold text-white">@moodwhich.kmuttnative</span> ลุ้นรับแซนวิชฟรี 1 ชิ้น
+          </p>
+        </div>
+
         <button
           onClick={handleDownloadStoryImage}
           disabled={isGeneratingImage}
-          className="w-full py-4 px-6 rounded-2xl font-black text-sm sm:text-base text-white shadow-lg flex items-center justify-center gap-2.5 transition-all transform active:scale-98 hover:shadow-xl group relative overflow-hidden cursor-pointer"
-          style={{
-            background: 'linear-gradient(135deg, #F59E0B 0%, #EA580C 50%, #E11D48 100%)',
-          }}
+          className="btn-sticker w-full py-4 px-6 rounded-2xl font-black text-base flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-70"
         >
-          <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <Camera className="w-5 h-5 text-white" />
-          <span>
-            {isGeneratingImage ? 'กำลังเตรียมรูปภาพ...' : 'บันทึกรูป Chibi แชร์ลง IG Story (9:16)'}
-          </span>
-          <Download className="w-4 h-4 ml-auto" />
+          <Camera className="w-5 h-5" />
+          <span>{isGeneratingImage ? 'กำลังเตรียมรูปภาพ...' : 'บันทึกการ์ด IG Story (9:16)'}</span>
+          <Download className="w-4 h-4" />
         </button>
 
-        {/* Secondary Actions: Native Share & Copy Caption */}
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={handleNativeShare}
-            className="py-3 px-4 rounded-2xl bg-[#0D0D0D] text-[#FFE94D] font-bold text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-[#0D0D0D]/80 transition-all active:scale-95 shadow-md cursor-pointer"
+            className="py-3 px-4 rounded-2xl bg-ink text-yellow font-bold text-sm flex items-center justify-center gap-2 hover:bg-black transition-colors active:scale-95 cursor-pointer"
           >
             <Share2 className="w-4 h-4" />
             <span>แชร์ผลลัพธ์</span>
           </button>
-
           <button
             onClick={handleCopyCaption}
-            className="py-3 px-4 rounded-2xl bg-white/5 border-2 border-white/20 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-white/10 transition-all active:scale-95 shadow-xs cursor-pointer"
+            className="py-3 px-4 rounded-2xl bg-white text-ink border-2 border-ink font-bold text-sm flex items-center justify-center gap-2 hover:bg-yellow transition-colors active:scale-95 cursor-pointer"
           >
-            {copiedCaption ? (
-              <>
-                <Check className="w-4 h-4 text-[#FFE94D]" />
-                <span className="text-[#FFE94D]">คัดลอกแล้ว!</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-4 h-4 text-white/70" />
-                <span>คัดลอกแคปชัน</span>
-              </>
-            )}
+            {copiedCaption ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            <span>{copiedCaption ? 'คัดลอกแล้ว!' : 'คัดลอกแคปชัน'}</span>
           </button>
         </div>
+
+        <a
+          href="https://www.instagram.com/moodwhich.kmuttnative/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2.5 rounded-full bg-ink py-3 text-yellow font-semibold text-sm hover:scale-[1.01] transition-transform"
+        >
+          <InstagramIcon className="w-5 h-5 text-white" />
+          @moodwhich.kmuttnative
+        </a>
 
         {/* Story Card Live Preview Toggle */}
-        <div className="text-center pt-2">
+        <div className="text-center pt-1">
           <button
-            onClick={() => setShowStoryPreview(!showStoryPreview)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/50 hover:text-white py-1 px-3 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+            onClick={() => {
+              sfx.tap();
+              setShowStoryPreview(!showStoryPreview);
+            }}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/75 hover:text-yellow py-1 px-3 cursor-pointer"
           >
             <Eye className="w-3.5 h-3.5" />
-            <span>{showStoryPreview ? 'ซ่อนการ์ดตัวอย่าง Chibi Story' : 'ดูตัวอย่างการ์ด IG Story (9:16)'}</span>
+            <span>{showStoryPreview ? 'ซ่อนตัวอย่างการ์ด' : 'ดูตัวอย่างการ์ด IG Story'}</span>
           </button>
         </div>
 
-        {/* Expandable Preview Area */}
         <AnimatePresence>
           {showStoryPreview && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden pt-2 flex flex-col items-center"
+              className="overflow-hidden flex justify-center"
             >
-              <div className="p-3 bg-[#0D0D0D]/80 rounded-3xl shadow-2xl scale-75 origin-top">
-                <StoryCard mood={mood} />
+              {/* 450×800 card shown at 70% */}
+              <div className="w-[315px] h-[560px] overflow-hidden rounded-2xl border-[3px] border-ink shadow-[6px_6px_0_#0D0D0D]">
+                <div className="origin-top-left scale-[0.7]">
+                  <StoryCard mood={mood} />
+                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Retake Button */}
-        <div className="text-center pt-3">
+        <div className="text-center pt-2">
           <button
             onClick={onRetake}
-            className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-white/50 hover:text-white transition-colors py-2 px-4 rounded-full hover:bg-white/10 active:scale-95 cursor-pointer"
+            className="inline-flex items-center gap-2 text-sm font-bold text-white/80 hover:text-yellow transition-colors py-2 px-4 cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" />
-            <span>ค้นหา Chibi อารมณ์ใหม่อีกครั้ง</span>
+            <span>ทำควิซใหม่อีกครั้ง</span>
           </button>
         </div>
-      </motion.div>
+      </motion.section>
 
       {/* Hidden Offscreen Story Card for High-Res PNG Capture */}
-      <div className="fixed -left-[9999px] -top-[9999px] pointer-events-none">
+      <div className="fixed -left-[9999px] -top-[9999px] pointer-events-none" aria-hidden="true">
         <StoryCard ref={storyCardRef} mood={mood} />
       </div>
     </div>

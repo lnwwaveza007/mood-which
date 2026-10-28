@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Abril_Fatface, Kanit, Poppins, Anuphan } from "next/font/google";
+import { Abril_Fatface, Chonburi, Kanit, Poppins } from "next/font/google";
 import "./globals.css";
 
-// Display headline — fat-face serif for "MOOD-WICH"
+// Display headline — fat-face serif for "MOOD WHICH"
 const abrilFatface = Abril_Fatface({
   weight: ["400"],
   subsets: ["latin"],
@@ -10,27 +10,27 @@ const abrilFatface = Abril_Fatface({
   display: "swap",
 });
 
-// Price / numeric — extra-bold rounded grotesque
+// Tape labels — looped Thai display serif from the poster
+const chonburi = Chonburi({
+  weight: ["400"],
+  subsets: ["thai", "latin"],
+  variable: "--font-chonburi",
+  display: "swap",
+});
+
+// Thai body, prices and numbers
 const kanit = Kanit({
-  weight: ["400", "500", "600", "700", "800", "900"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
   subsets: ["thai", "latin"],
   variable: "--font-kanit",
   display: "swap",
 });
 
-// English labels — geometric sans
+// Small English labels — "SECTION 8 GROUP 8"
 const poppins = Poppins({
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
   variable: "--font-poppins",
-  display: "swap",
-});
-
-// Thai body — clean rounded Thai sans
-const anuphan = Anuphan({
-  weight: ["300", "400", "500", "600", "700"],
-  subsets: ["thai", "latin"],
-  variable: "--font-anuphan",
   display: "swap",
 });
 
@@ -39,7 +39,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#1F41A8",
+  themeColor: "#0B46AE",
 };
 
 export const metadata: Metadata = {
@@ -77,9 +77,9 @@ export default function RootLayout({
   return (
     <html
       lang="th"
-      className={`${abrilFatface.variable} ${kanit.variable} ${poppins.variable} ${anuphan.variable} h-full antialiased`}
+      className={`${abrilFatface.variable} ${chonburi.variable} ${kanit.variable} ${poppins.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#1F41A8] text-white selection:bg-[#FFE94D] selection:text-[#0D0D0D]">
+      <body className="poster-bg min-h-full flex flex-col text-white selection:bg-yellow selection:text-ink">
         {children}
       </body>
     </html>

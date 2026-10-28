@@ -4,27 +4,44 @@ import React, { useState } from 'react';
 import {
   MOOD_PROFILES,
   QUIZ_QUESTIONS,
+  BASE_SANDWICH_FILLINGS,
   calculateMoodResult,
+  FundamentalMood,
   MoodType,
-  ALL_MOOD_KEYS,
 } from '@/data/quizData';
 import QuizStep from '@/components/QuizStep';
 import ResultView from '@/components/ResultView';
-import SandwichIllustration from '@/components/SandwichIllustration';
+import ChibiSticker from '@/components/ChibiSticker';
+import SoundToggle from '@/components/SoundToggle';
+import { sfx, startMusic } from '@/lib/sound';
+import { Sparkle, GooglyEyes, PromoBurst, SectionTag, InstagramIcon } from '@/components/Decor';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ArrowRight, Heart } from 'lucide-react';
+import { ArrowRight, MapPin } from 'lucide-react';
 
 type ScreenState = 'landing' | 'quiz' | 'calculating' | 'result';
+
+const FUNDAMENTALS: FundamentalMood[] = ['happy', 'boring', 'angry', 'sad'];
+
+// Hero chibis sit around the headline like on the poster.
+const HERO_CHIBIS: { mood: FundamentalMood; className: string }[] = [
+  // Top pair would cover the headline on phones, so they only show from sm up.
+  { mood: 'sad', className: 'hidden sm:block left-[-2%] top-[18%] -rotate-12' },
+  { mood: 'happy', className: 'hidden sm:block right-[-2%] top-[14%] rotate-12' },
+  { mood: 'boring', className: 'left-[2%] bottom-[2%] -rotate-6' },
+  { mood: 'angry', className: 'right-[2%] bottom-[4%] rotate-6' },
+];
 
 export default function Home() {
   const [screenState, setScreenState] = useState<ScreenState>('landing');
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [resultMood, setResultMood] = useState<MoodType>('happy');
-  const [previewMood, setPreviewMood] = useState<MoodType>('happy');
-  const [activeMoodTab, setActiveMoodTab] = useState<'all' | 'fundamental' | 'mixed'>('all');
 
   const startQuiz = () => {
+    window.scrollTo(0, 0);
+    // First click is the user gesture browsers need before any audio can play.
+    sfx.start();
+    startMusic();
     setAnswers({});
     setCurrentStep(0);
     setScreenState('quiz');
@@ -38,6 +55,7 @@ export default function Home() {
     // If more questions exist, proceed to next question
     if (currentStep < QUIZ_QUESTIONS.length - 1) {
       setTimeout(() => {
+        sfx.next();
         setCurrentStep((prev) => prev + 1);
       }, 250);
     } else {
@@ -45,14 +63,17 @@ export default function Home() {
       const calculated = calculateMoodResult(updatedAnswers);
       setResultMood(calculated);
       setScreenState('calculating');
+      sfx.drumroll(1.6);
 
       setTimeout(() => {
+        sfx.reveal();
         setScreenState('result');
-      }, 1600);
+      }, 1800);
     }
   };
 
   const handleBack = () => {
+    sfx.back();
     if (currentStep > 0) {
       setCurrentStep((prev) => prev - 1);
     } else {
@@ -61,46 +82,33 @@ export default function Home() {
   };
 
   const handleRetake = () => {
+    sfx.tap();
     setAnswers({});
     setCurrentStep(0);
     setScreenState('landing');
   };
 
-  const displayedMoods = ALL_MOOD_KEYS.filter((key) => {
-    if (activeMoodTab === 'fundamental') return MOOD_PROFILES[key].isFundamental;
-    if (activeMoodTab === 'mixed') return !MOOD_PROFILES[key].isFundamental;
-    return true;
-  });
+  // Quiz and loading screens are locked to one viewport: no scrolling mid-quiz.
+  const isFixedScreen = screenState === 'quiz' || screenState === 'calculating';
 
   return (
-    <main className="min-h-screen bg-[#1F41A8] text-white flex flex-col justify-between selection:bg-[#FFE94D] selection:text-[#0D0D0D] relative z-[1]">
-      {/* Top Navbar */}
-      <header className="w-full max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
-        <div
-          onClick={handleRetake}
-          className="flex items-center gap-2.5 cursor-pointer select-none group"
-        >
-          <div className="w-8 h-8 rounded-xl bg-[#FFE94D] text-[#0D0D0D] flex items-center justify-center font-black text-base shadow-xs group-hover:rotate-6 transition-transform">
-            ✨
-          </div>
-          <div>
-            <h1 className="text-sm font-black text-white tracking-tight leading-none">
-              Mood W(h)ich
-            </h1>
-            <p className="text-[10px] text-[#FFE94D]/70 font-medium">
-              แซนด์วิชคิดตามอารมณ์
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0D0D0D] border border-[#FFE94D]/30 text-[11px] font-bold text-[#FFE94D]">
-          <Sparkles className="w-3.5 h-3.5 text-[#FFE94D]" />
-          <span>45s Quiz • 12 Chibis</span>
+    <main
+      className={`text-white flex flex-col relative z-[1] overflow-x-hidden ${
+        isFixedScreen ? 'h-dvh overflow-y-hidden' : 'min-h-screen'
+      }`}
+    >
+      {/* Poster top line */}
+      <header className="w-full max-w-5xl mx-auto px-4 sm:px-6 pt-4 flex items-center justify-between">
+        <button onClick={handleRetake} className="cursor-pointer" aria-label="กลับหน้าแรก">
+          <SectionTag />
+        </button>
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] sm:text-sm font-semibold text-yellow">แซนวิชตามอารมณ์</span>
+          <SoundToggle />
         </div>
       </header>
 
-      {/* Dynamic Screen Content */}
-      <div className="flex-1 flex items-center justify-center w-full">
+      <div className={`flex-1 min-h-0 flex justify-center w-full ${isFixedScreen ? 'items-stretch' : 'items-start'}`}>
         <AnimatePresence mode="wait">
           {screenState === 'landing' && (
             <motion.div
@@ -109,130 +117,9 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.35 }}
-              className="w-full max-w-lg mx-auto p-4 sm:p-6 text-center"
+              className="w-full"
             >
-              {/* Decorative floating badge */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#0D0D0D] border border-[#FFE94D]/40 text-[#FFE94D] text-xs font-bold shadow-2xs mb-3 animate-bounce">
-                <span>✨ Inside-Out Mood Chibi × 4 แซนด์วิชหลัก</span>
-              </div>
-
-              {/* Main Headline */}
-              <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-tight">
-                วันนี้คุณคือ Chibi ตัวไหน? <br />
-                <span className="text-[#FFE94D]">
-                  ค้นพบตัวตน & แซนด์วิชจับคู่ 2 ไส้
-                </span>
-              </h1>
-
-              {/* Subtitle */}
-              <p className="text-xs sm:text-sm text-white/70 font-medium mt-2.5 max-w-md mx-auto leading-relaxed">
-                ทำแบบทดสอบสั้น ๆ 4 ข้อ (45 วิ) เพื่อค้นหา Chibi อารมณ์ของคุณ
-                พร้อมจับคู่แซนด์วิช 4 ไส้หลัก (สุข, เบื่อ, โกรธ, เศร้า) สั่งแบบ 1 ชิ้นไส้นึง อีกชิ้นอีกไส้นึงได้ถึง 12 สไตล์! 🥪📸
-              </p>
-
-              {/* Hero Chibi Preview Showcase */}
-              <div className="my-2 relative flex flex-col justify-center items-center">
-                <div
-                  className="absolute w-56 h-56 rounded-full blur-3xl -z-10 transition-colors duration-500"
-                  style={{ backgroundColor: `${MOOD_PROFILES[previewMood].primaryColor}40` }}
-                />
-                <motion.div
-                  key={previewMood}
-                  initial={{ scale: 0.9, opacity: 0.8 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                  className="transform hover:scale-105 transition-transform duration-300 cursor-pointer"
-                >
-                  <SandwichIllustration mood={previewMood} size="md" />
-                </motion.div>
-                <div className="mt-1 text-center">
-                  <p className="text-xs sm:text-sm font-black text-white flex items-center justify-center gap-1.5">
-                    <span>{MOOD_PROFILES[previewMood].emoji}</span>
-                    <span>{MOOD_PROFILES[previewMood].chibiName}</span>
-                    <span className="text-[11px] font-bold text-white/60">({MOOD_PROFILES[previewMood].chibiTitle})</span>
-                  </p>
-                  <p className="text-[10.5px] font-bold text-[#FFE94D] mt-0.5">
-                    🥪 {MOOD_PROFILES[previewMood].sandwichPairingTip}
-                  </p>
-                </div>
-              </div>
-
-              {/* Tabs: All / Fundamentals / Mixed */}
-              <div className="flex items-center justify-center gap-1.5 mb-2 bg-[#0D0D0D]/40 p-1 rounded-xl max-w-xs mx-auto border border-[#FFE94D]/20">
-                <button
-                  onClick={() => setActiveMoodTab('all')}
-                  className={`flex-1 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
-                    activeMoodTab === 'all'
-                      ? 'bg-[#FFE94D] text-[#0D0D0D] shadow-xs'
-                      : 'text-white/50 hover:text-white'
-                  }`}
-                >
-                  ทั้งหมด (12)
-                </button>
-                <button
-                  onClick={() => setActiveMoodTab('fundamental')}
-                  className={`flex-1 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
-                    activeMoodTab === 'fundamental'
-                      ? 'bg-[#FFE94D] text-[#0D0D0D] shadow-xs'
-                      : 'text-white/50 hover:text-white'
-                  }`}
-                >
-                  4 Chibi หลัก
-                </button>
-                <button
-                  onClick={() => setActiveMoodTab('mixed')}
-                  className={`flex-1 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
-                    activeMoodTab === 'mixed'
-                      ? 'bg-[#FFE94D] text-[#0D0D0D] shadow-xs'
-                      : 'text-white/50 hover:text-white'
-                  }`}
-                >
-                  8 Chibi ผสม
-                </button>
-              </div>
-
-              {/* 12 Chibi Interactive Pills Preview */}
-              <div className="flex flex-wrap items-center justify-center gap-1.5 mb-5 max-w-md mx-auto max-h-28 overflow-y-auto p-1">
-                {displayedMoods.map((key) => {
-                  const m = MOOD_PROFILES[key];
-                  const isSelected = previewMood === key;
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => setPreviewMood(key)}
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all border cursor-pointer ${
-                        isSelected
-                          ? 'ring-2 ring-amber-400 scale-105 shadow-xs'
-                          : 'opacity-85 hover:opacity-100 hover:scale-102'
-                      }`}
-                      style={{
-                        backgroundColor: m.secondaryColor,
-                        color: m.accentColor,
-                        borderColor: m.primaryColor,
-                      }}
-                    >
-                      <span>{m.emoji} {m.chibiName.split(' ')[0]}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Start CTA Button */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={startQuiz}
-                className="w-full py-4 px-6 rounded-2xl font-black text-base bg-[#FFE94D] text-[#0D0D0D] shadow-lg flex items-center justify-center gap-2.5 transition-all group hover:shadow-[#FFE94D]/30 hover:shadow-xl cursor-pointer"
-              >
-                <span>ค้นหา Chibi & แซนด์วิชของคุณ</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </motion.button>
-
-              {/* Micro Social Proof */}
-              <p className="text-[11px] text-white/50 font-medium mt-3 flex items-center justify-center gap-1.5">
-                <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
-                <span>มีผู้ค้นพบ Chibi ประจำอารมณ์แล้วกว่า 4,520+ คน</span>
-              </p>
+              <Landing onStart={startQuiz} />
             </motion.div>
           )}
 
@@ -243,7 +130,7 @@ export default function Home() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.25 }}
-              className="w-full"
+              className="w-full h-full"
             >
               <QuizStep
                 question={QUIZ_QUESTIONS[currentStep]}
@@ -262,17 +149,22 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="text-center p-8 flex flex-col items-center justify-center"
+              className="w-full text-center px-6 flex flex-col items-center justify-center"
             >
-              <div className="relative w-28 h-28 flex items-center justify-center mb-6">
-                <div className="absolute inset-0 rounded-full border-4 border-[#FFE94D]/30 border-t-[#FFE94D] animate-spin" />
-                <span className="text-4xl animate-bounce">✨</span>
+              <div className="flex items-end justify-center gap-1 mb-8">
+                {FUNDAMENTALS.map((m, i) => (
+                  <motion.div
+                    key={m}
+                    animate={{ y: [0, -22, 0] }}
+                    transition={{ duration: 0.7, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
+                  >
+                    <ChibiSticker moods={[m]} heightClass="h-24 sm:h-28" eager />
+                  </motion.div>
+                ))}
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                กำลังค้นหา Chibi & จับคู่ 2 ไส้แซนด์วิช...
-              </h2>
-              <p className="text-xs sm:text-sm text-white/60 font-medium mt-2">
-                วิเคราะห์พลังงาน • แมตช์คลื่นอารมณ์ • รังสรรค์ 1 ใน 12 Chibi ประจำตัวคุณ
+              <h2 className="tape text-lg sm:text-2xl">กำลังหาแซนวิชที่ใช่...</h2>
+              <p className="mt-4 text-sm text-white/80">
+                <span className="ink-bar">อ่านอารมณ์ · ทาสีขนมปัง · จี่ให้หอม</span>
               </p>
             </motion.div>
           )}
@@ -292,12 +184,181 @@ export default function Home() {
       </div>
 
       {/* Footer */}
-      <footer className="w-full max-w-2xl mx-auto px-4 py-4 text-center border-t border-white/10 text-white/40 text-[11px]">
-        <p>© 2026 Mood W(h)ich. All rights reserved.</p>
-        <p className="mt-0.5 text-white/30">
-          Crafted with Next.js, Tailwind CSS & Framer Motion for Viral Sharing
-        </p>
-      </footer>
+      {!isFixedScreen && (
+        <footer className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 mt-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-white/60">
+          <span className="font-label tracking-wider">KMUTT · GEN351 · SECTION 8 GROUP 8</span>
+          <span>© 2026 MoodWhich · แซนวิชตามอารมณ์</span>
+        </footer>
+      )}
     </main>
+  );
+}
+
+function Landing({ onStart }: { onStart: () => void }) {
+  return (
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6">
+      {/* ── HERO ─────────────────────────────────────────────── */}
+      <section className="relative pt-6 pb-10 sm:pb-14">
+        {HERO_CHIBIS.map(({ mood, className }, i) => (
+          <motion.div
+            key={mood}
+            initial={{ opacity: 0, scale: 0.6 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.15 + i * 0.1, type: 'spring', stiffness: 220, damping: 16 }}
+            className={`absolute z-0 pointer-events-none ${className}`}
+          >
+            <div className="animate-float" style={{ animationDelay: `${i * 0.7}s` }}>
+              <ChibiSticker moods={[mood]} heightClass="h-28 sm:h-44 lg:h-52" eager />
+            </div>
+          </motion.div>
+        ))}
+
+        <div className="relative z-10 text-center">
+          <h1 className="display-title text-[23vw] sm:text-[9.5rem] lg:text-[11rem]">
+            <span className="block">
+              M
+              <span className="relative inline-block">
+                O
+                <Sparkle className="absolute left-1/2 top-1/2 w-[34%] -translate-x-1/2 -translate-y-1/2 animate-twinkle"/>
+              </span>
+              <span className="relative inline-block">
+                O
+                <Sparkle
+                  className="absolute left-1/2 top-1/2 w-[34%] -translate-x-1/2 -translate-y-1/2 animate-twinkle [animation-delay:0.8s]"
+                />
+              </span>
+              D
+            </span>
+            <span className="block">WHICH</span>
+            <span className="sr-only">MoodWhich แซนวิชตามอารมณ์</span>
+          </h1>
+
+          {/* "อารมณ์แบบงี้? กินอะไรดี..." tape stack */}
+          <div className="relative mt-6 sm:mt-8 inline-flex flex-col items-center">
+            <GooglyEyes className="absolute -top-9 right-[-8%] w-14 sm:w-16 rotate-6" />
+            <p className="tape text-3xl sm:text-5xl -rotate-3">อารมณ์แบบงี้?</p>
+            <p className="font-tape text-yellow text-lg sm:text-2xl mt-2 self-end">กินอะไรดี...</p>
+          </div>
+
+          <p className="mt-4 max-w-md mx-auto text-sm sm:text-base">
+            <span className="ink-bar">ทำควิซ 4 ข้อ เพื่อหาแซนวิชที่ตรงกับความรู้สึกของคุณที่สุด</span>
+          </p>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={onStart}
+            className="btn-sticker mt-8 inline-flex items-center gap-3 px-7 sm:px-9 py-4 rounded-full font-black text-lg sm:text-xl cursor-pointer"
+          >
+            <span>เริ่มทำควิซเลย</span>
+            <ArrowRight className="w-6 h-6" strokeWidth={3} />
+          </motion.button>
+          <p className="mt-3 text-xs text-white/70">ใช้เวลาไม่ถึง 1 นาที · ได้การ์ดแชร์ลง IG Story</p>
+        </div>
+      </section>
+
+      {/* ── PRICE & PROMO ───────────────────────────────────── */}
+      <section className="relative grid grid-cols-[1fr_auto] items-center gap-4 sm:gap-8 py-6">
+        <div>
+          <p className="text-xl sm:text-2xl font-bold">ราคาชิ้นละ</p>
+          <p className="font-black text-7xl sm:text-8xl leading-none tracking-tight">35.-</p>
+          <p className="mt-4 text-xs sm:text-sm max-w-xs">
+            <span className="ink-bar">*แชะรูปแซนวิช แท็กร้านลง IG STORY</span>{' '}
+            <span className="ink-bar">ลุ้นรับแซนวิชฟรี 1 ชิ้น!</span>
+          </p>
+        </div>
+        <PromoBurst className="relative w-36 sm:w-48 text-[13px] sm:text-[17px] rotate-6" />
+      </section>
+
+      {/* ── MENU: 4 อารมณ์ · 4 สี · 4 รสชาติ ─────────────────── */}
+      <section className="py-10">
+        <div className="flex items-center gap-3 mb-2">
+          <h2 className="display-title text-5xl sm:text-7xl">MENU</h2>
+          <Sparkle className="w-8 sm:w-10 animate-twinkle" />
+        </div>
+        <p className="tape text-base sm:text-xl mb-8">แซนด์วิช 4 อารมณ์ · 4 สี · 4 รสชาติ</p>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          {FUNDAMENTALS.map((m, i) => {
+            const base = BASE_SANDWICH_FILLINGS[m];
+            return (
+              <motion.div
+                key={m}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ delay: i * 0.08 }}
+                className="relative rounded-3xl p-4 sm:p-5 pb-28 sm:pb-36 text-ink overflow-hidden min-h-[15rem]"
+                style={{ backgroundColor: base.color }}
+              >
+                <span className="label-chip text-sm sm:text-lg">{base.labelTh}</span>
+                <p className="mt-3 text-sm sm:text-base font-semibold leading-snug">{base.breadTh}</p>
+                <p className="text-sm sm:text-base font-medium leading-snug">
+                  {base.nameTh.split(' + ').map((part, j) => (
+                    <span key={j} className="block">
+                      {j > 0 && '+ '}
+                      {part}
+                    </span>
+                  ))}
+                </p>
+                <ChibiSticker
+                  moods={[m]}
+                  heightClass="h-28 sm:h-36"
+                  className="absolute -bottom-3 right-1 sm:right-3"
+                />
+              </motion.div>
+            );
+          })}
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <p className="text-sm">
+            <span className="ink-bar">ขนมปังทาสีตามอารมณ์ แล้วนำไปจี่หน้าร้านให้หอม</span>
+          </p>
+          <p className="tape text-sm sm:text-base rotate-1">ซอส + แพ็กเกจจิ้งต่างกันในแต่ละอารมณ์</p>
+        </div>
+      </section>
+
+      {/* ── MIX 2 อารมณ์ ──────────────────────────────────────── */}
+      <section className="py-6">
+        <div className="relative rounded-3xl bg-yellow text-ink p-5 sm:p-7 grid sm:grid-cols-[1fr_auto] gap-4 items-center overflow-hidden">
+          <div>
+            <span className="label-chip font-label text-sm sm:text-base">MIX 2 อารมณ์</span>
+            <p className="mt-3 text-lg sm:text-2xl font-black leading-snug">
+              วันนี้อารมณ์ปนกัน? จับคู่ 2 อารมณ์ในชิ้นเดียว
+            </p>
+            <p className="mt-1 text-sm sm:text-base font-medium">
+              เช่น สุข + โกรธ หรือ เศร้า + เฉย ๆ ได้ลอง 2 รสชาติในราคาเดียว <b>35.-</b>
+            </p>
+          </div>
+          <ChibiSticker moods={['happy', 'angry']} heightClass="h-32 sm:h-40" className="justify-self-center" />
+          <Sparkle className="absolute top-4 right-5 w-7 animate-twinkle"/>
+        </div>
+      </section>
+
+      {/* ── WHEN & WHERE ─────────────────────────────────────── */}
+      <section className="py-10 grid sm:grid-cols-2 gap-6 items-center">
+        <div>
+          <p className="display-title text-6xl sm:text-7xl">
+            12 <span className="block">NOV</span>
+          </p>
+          <p className="mt-2 font-black text-xl">9.30 – 12.00 น.</p>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-white/90">
+            <MapPin className="w-4 h-4 text-yellow" /> ชั้น 1 ตึกศิลปศาสตร์ · KMUTT
+          </p>
+        </div>
+        <div className="flex flex-col items-start sm:items-end gap-3">
+          <p className="tape text-base sm:text-lg">ฝากกดติดตามร้านเราด้วยนะ!</p>
+          <a
+            href="https://www.instagram.com/moodwhich.kmuttnative/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-3 rounded-full bg-ink px-5 py-3 text-yellow font-semibold text-base sm:text-lg hover:scale-[1.02] transition-transform"
+          >
+            <InstagramIcon className="w-7 h-7 text-white" />
+            @moodwhich.kmuttnative
+          </a>
+        </div>
+      </section>
+    </div>
   );
 }
