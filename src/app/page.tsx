@@ -164,7 +164,7 @@ export default function Home() {
               </div>
               <h2 className="tape text-lg sm:text-2xl">กำลังหาแซนวิชที่ใช่...</h2>
               <p className="mt-4 text-sm text-white/80">
-                <span className="ink-bar">อ่านอารมณ์ · ทาสีขนมปัง · จี่ให้หอม</span>
+                <span className="ink-bar">อ่านอารมณ์ · เลือกไส้ · จี่ให้หอม</span>
               </p>
             </motion.div>
           )}
@@ -269,13 +269,13 @@ function Landing({ onStart }: { onStart: () => void }) {
         <PromoBurst className="relative w-36 sm:w-48 text-[13px] sm:text-[17px] rotate-6" />
       </section>
 
-      {/* ── MENU: 4 อารมณ์ · 4 สี · 4 รสชาติ ─────────────────── */}
+      {/* ── MENU: 4 อารมณ์ · 4 ไส้ ─────────────────── */}
       <section className="py-10">
         <div className="flex items-center gap-3 mb-2">
           <h2 className="display-title text-5xl sm:text-7xl">MENU</h2>
           <Sparkle className="w-8 sm:w-10 animate-twinkle" />
         </div>
-        <p className="tape text-base sm:text-xl mb-8">แซนด์วิช 4 อารมณ์ · 4 สี · 4 รสชาติ</p>
+        <p className="tape text-base sm:text-xl mb-8">แซนด์วิช 4 อารมณ์ · 4 ไส้ · 4 รสชาติ</p>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {FUNDAMENTALS.map((m, i) => {
@@ -291,7 +291,7 @@ function Landing({ onStart }: { onStart: () => void }) {
                 style={{ backgroundColor: base.color }}
               >
                 <span className="label-chip text-sm sm:text-lg">{base.labelTh}</span>
-                <p className="mt-3 text-sm sm:text-base font-semibold leading-snug">{base.breadTh}</p>
+                <p className="mt-3 text-sm sm:text-base font-semibold leading-snug">ไส้</p>
                 <p className="text-sm sm:text-base font-medium leading-snug">
                   {base.nameTh.split(' + ').map((part, j) => (
                     <span key={j} className="block">
@@ -312,7 +312,7 @@ function Landing({ onStart }: { onStart: () => void }) {
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <p className="text-sm">
-            <span className="ink-bar">ขนมปังทาสีตามอารมณ์ แล้วนำไปจี่หน้าร้านให้หอม</span>
+            <span className="ink-bar">ขนมปังเหมือนกันทุกอารมณ์ เปลี่ยนแค่ไส้ แล้วจี่หน้าร้านให้หอม</span>
           </p>
           <p className="tape text-sm sm:text-base rotate-1">ซอส + แพ็กเกจจิ้งต่างกันในแต่ละอารมณ์</p>
         </div>
