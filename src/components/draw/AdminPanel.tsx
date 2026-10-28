@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Minus, Plus, RotateCcw } from 'lucide-react';
 import { api, errorText, ApiFail } from '@/lib/draw/client';
 import { SectionTag } from '@/components/Decor';
+import Kiosk from './Kiosk';
 
 interface Config {
   enabled: boolean;
@@ -24,6 +25,9 @@ interface Summary {
 }
 
 const POLL_MS = 5000;
+const PIN_KEY = 'moodwhich:draw:admin-pin';
+
+type View = 'kiosk' | 'unlock' | 'settings';
 const card = 'rounded-2xl bg-white text-ink border-[3px] border-ink p-4 shadow-[4px_4px_0_#0D0D0D]';
 
 export default function AdminPanel() {
@@ -35,7 +39,11 @@ export default function AdminPanel() {
   const [draft, setDraft] = useState<Config | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
   const [resetPin, setResetPin] = useState('');
+  const [view, setView] = useState<View>('kiosk');
+  const [unlockPin, setUnlockPin] = useState('');
   const pinRef = useRef('');
+  // Same PIN as pinRef, kept in state so the kiosk can receive it as a prop.
+  const [sessionPin, setSessionPin] = useState('');
 
   const call = useCallback(async (body: Record<string, unknown>): Promise<Summary | null> => {
     const res = await api<Summary>('/api/draw/admin', { pin: pinRef.current, ...body });
@@ -55,10 +63,76 @@ export default function AdminPanel() {
     const res = await call({ action: 'status' });
     setBusy(false);
     if (res) {
+      try {
+        sessionStorage.setItem(PIN_KEY, pin);
+      } catch {
+        // storage blocked: staff just log in again after a refresh
+      }
       setAuthed(true);
+      setSessionPin(pin);
+      setView('kiosk');
       setDraft(res.config);
     }
   };
+
+  const logout = () => {
+    try {
+      sessionStorage.removeItem(PIN_KEY);
+    } catch {
+      // ignore
+    }
+    pinRef.current = '';
+    setSessionPin('');
+    setPin('');
+    setAuthed(false);
+    setData(null);
+    setView('kiosk');
+  };
+
+  // Settings are behind the PIN again so a customer at the iPad can't open them.
+  const unlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    const res = await api<Summary>('/api/draw/admin', { pin: unlockPin, action: 'status' });
+    setBusy(false);
+    setUnlockPin('');
+    if (!res.ok) return setError(errorText(res as ApiFail));
+    setError(null);
+    setData(res);
+    setDraft(res.config);
+    setView('settings');
+  };
+
+  // Resume after an iPad refresh.
+  useEffect(() => {
+    let alive = true;
+    let saved: string | null = null;
+    try {
+      saved = sessionStorage.getItem(PIN_KEY);
+    } catch {
+      // ignore
+    }
+    if (!saved) return;
+    pinRef.current = saved;
+    api<Summary>('/api/draw/admin', { pin: saved, action: 'status' }).then((res) => {
+      if (!alive) return;
+      if (res.ok) {
+        setData(res);
+        setDraft(res.config);
+        setSessionPin(saved);
+        setAuthed(true);
+      } else {
+        try {
+          sessionStorage.removeItem(PIN_KEY);
+        } catch {
+          // ignore
+        }
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // Live counters while the page is open.
   useEffect(() => {
@@ -92,19 +166,68 @@ export default function AdminPanel() {
   const num = (key: keyof Config) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setDraft((d) => (d ? { ...d, [key]: e.target.value === '' ? 0 : Number(e.target.value) } : d));
 
+  if (authed && data && view === 'kiosk') {
+    return (
+      <main className="min-h-dvh text-white relative z-[1]">
+        <Kiosk
+          pin={sessionPin}
+          enabled={data.config.enabled}
+          prizesLeft={data.prizesLeft}
+          prizePool={data.config.prizePool}
+          onTurnDone={() => void call({ action: 'status' })}
+          onOpenSettings={() => {
+            setError(null);
+            setView('unlock');
+          }}
+          onAuthLost={logout}
+        />
+      </main>
+    );
+  }
+
   const field = 'w-24 rounded-lg border-2 border-ink px-2 py-1.5 text-right font-bold';
 
   return (
     <main className="min-h-dvh text-white relative z-[1]">
       <header className="w-full max-w-xl mx-auto px-4 pt-4 flex items-center justify-between">
         <SectionTag />
-        <Link href="/" className="text-xs font-semibold text-yellow">หน้าแรก</Link>
+        {authed ? (
+          <div className="flex items-center gap-4 text-xs font-semibold text-yellow">
+            <button onClick={() => setView('kiosk')} className="cursor-pointer">โหมดลูกค้า</button>
+            <button onClick={logout} className="cursor-pointer">ออกจากระบบ</button>
+          </div>
+        ) : (
+          <Link href="/" className="text-xs font-semibold text-yellow">หน้าแรก</Link>
+        )}
       </header>
 
       <div className="w-full max-w-xl mx-auto px-4 py-6 space-y-5">
         <h1 className="display-title text-[2.6rem] sm:text-5xl">DRAW ADMIN</h1>
 
-        {!authed ? (
+        {authed && view === 'unlock' ? (
+          <form onSubmit={unlock} className="space-y-4 max-w-xs">
+            <p className="tape text-base">ใส่ PIN เพื่อเปิดตั้งค่า</p>
+            <input
+              value={unlockPin}
+              onChange={(e) => setUnlockPin(e.target.value.replace(/D/g, '').slice(0, 8))}
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              autoFocus
+              aria-label="PIN ผู้ดูแล"
+              className="w-full text-center text-3xl tracking-[0.5em] py-3 rounded-2xl border-[3px] border-ink bg-white text-ink outline-none shadow-[5px_5px_0_#0D0D0D]"
+            />
+            {error && <p className="text-sm font-semibold text-yellow">{error}</p>}
+            <div className="flex gap-3">
+              <button type="button" onClick={() => { setView('kiosk'); setError(null); }} className="flex-1 py-3 rounded-full bg-white text-ink border-2 border-ink font-bold cursor-pointer">
+                กลับ
+              </button>
+              <button disabled={!unlockPin || busy} className="btn-sticker flex-1 py-3 rounded-full font-black cursor-pointer disabled:opacity-50">
+                เปิด
+              </button>
+            </div>
+          </form>
+        ) : !authed ? (
           <form onSubmit={login} className="space-y-4 max-w-xs">
             <p className="tape text-base">ใส่ PIN ผู้ดูแล</p>
             <input
