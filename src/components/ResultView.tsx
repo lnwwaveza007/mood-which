@@ -9,9 +9,7 @@ import { Sparkle, PromoBurst, InstagramIcon } from './Decor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toPng } from 'html-to-image';
 import confetti from 'canvas-confetti';
-import Link from 'next/link';
 import { sfx } from '@/lib/sound';
-import { api } from '@/lib/draw/client';
 import { Download, Share2, Copy, RotateCcw, Sparkles, Coffee, Check, Eye, Camera } from 'lucide-react';
 
 interface ResultViewProps {
@@ -25,19 +23,6 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
   const [copiedCaption, setCopiedCaption] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showStoryPreview, setShowStoryPreview] = useState(false);
-
-  const [draw, setDraw] = useState<{ enabled: boolean; prizesLeft: number; prizePool: number } | null>(null);
-
-  // Lucky-draw teaser: hidden when the draw is off or the API is unreachable.
-  useEffect(() => {
-    let alive = true;
-    api<{ enabled: boolean; prizesLeft: number; prizePool: number }>('/api/draw/status').then((r) => {
-      if (alive && r.ok) setDraw(r);
-    });
-    return () => {
-      alive = false;
-    };
-  }, []);
 
   const menuMoods = sandwichMoods(mood);
   const isMix = menuMoods.length > 1;
@@ -234,22 +219,6 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
         transition={{ delay: 0.2, duration: 0.4 }}
         className="mt-10 space-y-4"
       >
-        {draw?.enabled && (
-          <Link
-            href={`/draw?mood=${mood.id}`}
-            onClick={() => sfx.tap()}
-            className="btn-sticker flex items-center justify-between gap-3 rounded-2xl px-5 py-4 text-left"
-          >
-            <span>
-              <span className="block font-black text-lg leading-tight">แท็ก IG ลุ้นครึ่งชิ้นฟรี</span>
-              <span className="block text-xs font-semibold">
-                {draw.prizesLeft > 0 ? `เหลือ ${draw.prizesLeft}/${draw.prizePool} รางวัล` : 'รางวัลหมดแล้ว'} · รางวัลจำกัด หมดแล้วหมดเลย
-              </span>
-            </span>
-            <span className="text-2xl">🎡</span>
-          </Link>
-        )}
-
         <div className="rounded-3xl border-2 border-dashed border-yellow/70 p-4 text-center">
           <p className="font-tape text-yellow text-base sm:text-lg">แชะ & แท็ก ลุ้นฟรี!</p>
           <p className="text-xs sm:text-sm text-white/85 mt-1">

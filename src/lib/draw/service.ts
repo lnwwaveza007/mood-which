@@ -5,8 +5,6 @@ import { DrawConfig, DrawState } from './types';
 const MAX_TRIES = 3;
 const LOCK_MS = 30_000;
 
-export type PinKind = 'staff' | 'admin';
-
 export type ServiceError =
   | { ok: false; error: 'bad_handle' }
   | { ok: false; error: 'disabled' }
@@ -15,16 +13,15 @@ export type ServiceError =
   | { ok: false; error: 'not_configured' }
   | { ok: false; error: 'bad_request' };
 
-function expectedPin(kind: PinKind): string | null {
+/** The draw is run from the booth iPad, so one PIN (the admin PIN) guards everything. */
+function expectedPin(): string | null {
   const dev = process.env.NODE_ENV !== 'production';
-  const staff = process.env.DRAW_STAFF_PIN ?? (dev ? '1234' : undefined);
-  if (kind === 'staff') return staff ?? null;
-  return process.env.DRAW_ADMIN_PIN ?? staff ?? null;
+  return process.env.DRAW_ADMIN_PIN ?? process.env.DRAW_STAFF_PIN ?? (dev ? '1234' : null);
 }
 
 /** Shared lockout: 3 wrong PINs and the booth waits 30 s (stops guessing a 4-digit PIN). */
-function checkPin(state: DrawState, kind: PinKind, supplied: unknown, now: number): ServiceError | null {
-  const expected = expectedPin(kind);
+function checkPin(state: DrawState, supplied: unknown, now: number): ServiceError | null {
+  const expected = expectedPin();
   if (!expected) return { ok: false, error: 'not_configured' };
   if (now < state.lockUntil) return { ok: false, error: 'locked', waitSec: Math.ceil((state.lockUntil - now) / 1000) };
   if (typeof supplied === 'string' && supplied === expected) {
@@ -42,36 +39,31 @@ function checkPin(state: DrawState, kind: PinKind, supplied: unknown, now: numbe
 
 const left = (s: DrawState) => Math.max(0, s.config.prizePool - s.prizesGiven);
 
-/** Public numbers for screen 1 (never exposes mode or N). */
-export async function publicStatus() {
-  return withState((s) => ({ enabled: s.config.enabled, prizesLeft: left(s), prizePool: s.config.prizePool }));
-}
-
-/** Screen 2: check handle + staff PIN without spending the entry. */
-export async function verifyEntry(rawHandle: unknown, pin: unknown) {
+/** Kiosk step 1: is this IG handle still allowed to play? Does not spend the entry. */
+export async function kioskCheck(pin: unknown, rawHandle: unknown) {
   const handle = typeof rawHandle === 'string' ? normalizeHandle(rawHandle) : null;
   if (!handle) return { ok: false, error: 'bad_handle' } as ServiceError;
   return withState((s) => {
-    if (!s.config.enabled) return { ok: false, error: 'disabled' } as ServiceError;
-    const bad = checkPin(s, 'staff', pin, Date.now());
+    const bad = checkPin(s, pin, Date.now());
     if (bad) return bad;
+    if (!s.config.enabled) return { ok: false, error: 'disabled' } as ServiceError;
     return { ok: true as const, handle, alreadyUsed: Boolean(s.entries[handle]), prizesLeft: left(s) };
   });
 }
 
-/** Screen 3: the one place a result is decided. */
-export async function spin(rawHandle: unknown, pin: unknown) {
+/** Kiosk step 2: the one place a result is decided. */
+export async function kioskSpin(pin: unknown, rawHandle: unknown) {
   const handle = typeof rawHandle === 'string' ? normalizeHandle(rawHandle) : null;
   if (!handle) return { ok: false, error: 'bad_handle' } as ServiceError;
   return withState((s) => {
-    if (!s.config.enabled) return { ok: false, error: 'disabled' } as ServiceError;
     const now = Date.now();
-    const bad = checkPin(s, 'staff', pin, now);
+    const bad = checkPin(s, pin, now);
     if (bad) return bad;
+    if (!s.config.enabled) return { ok: false, error: 'disabled' } as ServiceError;
 
     const prev = s.entries[handle];
     if (prev) {
-      // Refresh / repeat: replay the saved result, never re-roll.
+      // Repeat / refresh: replay the saved result, never re-roll.
       return { ok: true as const, alreadyUsed: true, result: prev.result, prizeCode: prev.prizeCode, prizesLeft: left(s) };
     }
 
@@ -115,7 +107,7 @@ const int = (v: unknown, min: number, max: number) =>
 export async function admin(pin: unknown, req: AdminAction) {
   return withState((s) => {
     const now = Date.now();
-    const bad = checkPin(s, 'admin', pin, now);
+    const bad = checkPin(s, pin, now);
     if (bad) return bad;
 
     switch (req.action) {
@@ -150,7 +142,7 @@ export async function admin(pin: unknown, req: AdminAction) {
       }
       case 'reset': {
         // Second PIN check on purpose: a stray tap on a staff phone can't wipe the counters.
-        const again = checkPin(s, 'admin', req.confirmPin, now);
+        const again = checkPin(s, req.confirmPin, now);
         if (again) return again;
         const keep = s.config;
         s.entries = {};
