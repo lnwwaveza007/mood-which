@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Height breakpoints so the quiz fits one screen on short phones */
+@custom-variant short (@media (max-height: 900px));   /* drop option sub-labels */
+@custom-variant compact (@media (max-height: 800px)); /* tighter sizing */
+@custom-variant tiny (@media (max-height: 640px));
+
 /* ── MoodWhich Design System Tokens (from the GEN351 poster) ──────── */
 :root {
   --blue:      #0B46AE;

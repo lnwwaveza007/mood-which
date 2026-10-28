@@ -9,6 +9,7 @@ import { Sparkle, PromoBurst, InstagramIcon } from './Decor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toPng } from 'html-to-image';
 import confetti from 'canvas-confetti';
+import { sfx } from '@/lib/sound';
 import { Download, Share2, Copy, RotateCcw, Sparkles, Coffee, Check, Eye, Camera } from 'lucide-react';
 
 interface ResultViewProps {
@@ -50,6 +51,7 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
   // Generate and Download Story PNG
   const handleDownloadStoryImage = async () => {
     if (!storyCardRef.current) return;
+    sfx.shutter();
     setIsGeneratingImage(true);
     showToast('กำลังสร้าง Story Card ขนาด 9:16...');
 
@@ -75,6 +77,7 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
 
   // Web Share API
   const handleNativeShare = async () => {
+    sfx.tap();
     const shareData = {
       title: `วันนี้อารมณ์ของฉันคือ "${mood.chibiName}"`,
       text: `วันนี้ฉันคือ ${mood.chibiName} ${mood.emoji} เมนูที่ใช่: ${mood.sandwichName} 🥪 มาหาแซนวิชตามอารมณ์ของคุณกัน! ${mood.hashtag}`,
@@ -101,6 +104,7 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
 
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(captionText);
+      sfx.ding();
       setCopiedCaption(true);
       showToast('คัดลอกแคปชันแล้ว! วางใน Story ได้เลย');
       setTimeout(() => setCopiedCaption(false), 3000);
@@ -263,7 +267,10 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
         {/* Story Card Live Preview Toggle */}
         <div className="text-center pt-1">
           <button
-            onClick={() => setShowStoryPreview(!showStoryPreview)}
+            onClick={() => {
+              sfx.tap();
+              setShowStoryPreview(!showStoryPreview);
+            }}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/75 hover:text-yellow py-1 px-3 cursor-pointer"
           >
             <Eye className="w-3.5 h-3.5" />

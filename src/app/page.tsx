@@ -12,6 +12,8 @@ import {
 import QuizStep from '@/components/QuizStep';
 import ResultView from '@/components/ResultView';
 import ChibiSticker from '@/components/ChibiSticker';
+import SoundToggle from '@/components/SoundToggle';
+import { sfx, startMusic } from '@/lib/sound';
 import { Sparkle, GooglyEyes, PromoBurst, SectionTag, InstagramIcon } from '@/components/Decor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, MapPin } from 'lucide-react';
@@ -36,6 +38,10 @@ export default function Home() {
   const [resultMood, setResultMood] = useState<MoodType>('happy');
 
   const startQuiz = () => {
+    window.scrollTo(0, 0);
+    // First click is the user gesture browsers need before any audio can play.
+    sfx.start();
+    startMusic();
     setAnswers({});
     setCurrentStep(0);
     setScreenState('quiz');
@@ -49,6 +55,7 @@ export default function Home() {
     // If more questions exist, proceed to next question
     if (currentStep < QUIZ_QUESTIONS.length - 1) {
       setTimeout(() => {
+        sfx.next();
         setCurrentStep((prev) => prev + 1);
       }, 250);
     } else {
@@ -56,14 +63,17 @@ export default function Home() {
       const calculated = calculateMoodResult(updatedAnswers);
       setResultMood(calculated);
       setScreenState('calculating');
+      sfx.drumroll(1.6);
 
       setTimeout(() => {
+        sfx.reveal();
         setScreenState('result');
       }, 1800);
     }
   };
 
   const handleBack = () => {
+    sfx.back();
     if (currentStep > 0) {
       setCurrentStep((prev) => prev - 1);
     } else {
@@ -72,22 +82,33 @@ export default function Home() {
   };
 
   const handleRetake = () => {
+    sfx.tap();
     setAnswers({});
     setCurrentStep(0);
     setScreenState('landing');
   };
 
+  // Quiz and loading screens are locked to one viewport: no scrolling mid-quiz.
+  const isFixedScreen = screenState === 'quiz' || screenState === 'calculating';
+
   return (
-    <main className="min-h-screen text-white flex flex-col relative z-[1] overflow-x-hidden">
+    <main
+      className={`text-white flex flex-col relative z-[1] overflow-x-hidden ${
+        isFixedScreen ? 'h-dvh overflow-y-hidden' : 'min-h-screen'
+      }`}
+    >
       {/* Poster top line */}
       <header className="w-full max-w-5xl mx-auto px-4 sm:px-6 pt-4 flex items-center justify-between">
         <button onClick={handleRetake} className="cursor-pointer" aria-label="กลับหน้าแรก">
           <SectionTag />
         </button>
-        <span className="text-[11px] sm:text-sm font-semibold text-yellow">แซนวิชตามอารมณ์</span>
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] sm:text-sm font-semibold text-yellow">แซนวิชตามอารมณ์</span>
+          <SoundToggle />
+        </div>
       </header>
 
-      <div className="flex-1 flex items-start justify-center w-full">
+      <div className={`flex-1 min-h-0 flex justify-center w-full ${isFixedScreen ? 'items-stretch' : 'items-start'}`}>
         <AnimatePresence mode="wait">
           {screenState === 'landing' && (
             <motion.div
@@ -109,7 +130,7 @@ export default function Home() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.25 }}
-              className="w-full"
+              className="w-full h-full"
             >
               <QuizStep
                 question={QUIZ_QUESTIONS[currentStep]}
@@ -128,7 +149,7 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="text-center px-6 py-16 flex flex-col items-center justify-center"
+              className="w-full text-center px-6 flex flex-col items-center justify-center"
             >
               <div className="flex items-end justify-center gap-1 mb-8">
                 {FUNDAMENTALS.map((m, i) => (
@@ -163,10 +184,12 @@ export default function Home() {
       </div>
 
       {/* Footer */}
-      <footer className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 mt-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-white/60">
-        <span className="font-label tracking-wider">KMUTT · GEN351 · SECTION 8 GROUP 8</span>
-        <span>© 2026 MoodWhich · แซนวิชตามอารมณ์</span>
-      </footer>
+      {!isFixedScreen && (
+        <footer className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 mt-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-white/60">
+          <span className="font-label tracking-wider">KMUTT · GEN351 · SECTION 8 GROUP 8</span>
+          <span>© 2026 MoodWhich · แซนวิชตามอารมณ์</span>
+        </footer>
+      )}
     </main>
   );
 }
