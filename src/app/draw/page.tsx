@@ -1,15 +1,6 @@
-import type { Metadata } from 'next';
-import { MOOD_PROFILES, MoodType } from '@/data/quizData';
-import DrawFlow from '@/components/draw/DrawFlow';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Lucky Draw • MoodWhich',
-  description: 'แท็ก IG ลุ้นครึ่งชิ้นฟรี รางวัลจำกัด 10 รางวัล',
-};
-
-// /draw?mood=<id> — the quiz result page passes the customer's mood along.
-export default async function DrawPage({ searchParams }: { searchParams: Promise<{ mood?: string }> }) {
-  const { mood } = await searchParams;
-  const id: MoodType = mood && mood in MOOD_PROFILES ? (mood as MoodType) : 'happy';
-  return <DrawFlow mood={id} />;
+// The draw runs only from the booth iPad (admin). Old customer links land there.
+export default function DrawPage() {
+  redirect('/draw/admin');
 }

@@ -45,7 +45,7 @@ export function rotationFor(index: number, current: number): number {
 
 export default function Wheel({ rotation, durationSec }: WheelProps) {
   return (
-    <div className="relative mx-auto w-[min(78vw,20rem)] aspect-square">
+    <div className="relative mx-auto w-[min(78vw,20rem)] md:w-[min(60vh,30rem)] aspect-square">
       {/* pointer */}
       <svg viewBox="0 0 40 40" className="absolute left-1/2 -top-3 z-10 w-9 -translate-x-1/2 drop-shadow" aria-hidden="true">
         <path d="M20 38 L4 6 Q20 -2 36 6 Z" fill="#E5322D" stroke="#0D0D0D" strokeWidth="3" strokeLinejoin="round" />
