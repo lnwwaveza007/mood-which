@@ -263,7 +263,7 @@ function Landing({ onStart }: { onStart: () => void }) {
           <p className="font-black text-7xl sm:text-8xl leading-none tracking-tight">35.-</p>
           <p className="mt-4 text-xs sm:text-sm max-w-xs">
             <span className="ink-bar">*แชะรูปแซนวิช แท็กร้านลง IG STORY</span>{' '}
-            <span className="ink-bar">ลุ้นรับแซนวิชฟรี 1 ชิ้น!</span>
+            <span className="ink-bar">ลุ้นรับแซนวิชฟรีครึ่งชิ้น!</span>
           </p>
         </div>
         <PromoBurst className="relative w-36 sm:w-48 text-[13px] sm:text-[17px] rotate-6" />

@@ -66,7 +66,7 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
       link.download = `moodwhich-${mood.id}-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
-      showToast('บันทึกรูปแล้ว! แท็ก @moodwhich.kmuttnative ลง IG Story ลุ้นแซนวิชฟรี');
+      showToast('บันทึกรูปแล้ว! แท็ก @moodwhich.kmuttnative ลง IG Story ลุ้นแซนวิชฟรีครึ่งชิ้น');
     } catch (err) {
       console.error('Failed to generate image', err);
       showToast('เกิดข้อผิดพลาดในการสร้างรูปภาพ กรุณาลองใหม่อีกครั้ง');
@@ -223,7 +223,7 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
           <p className="font-tape text-yellow text-base sm:text-lg">แชะ & แท็ก ลุ้นฟรี!</p>
           <p className="text-xs sm:text-sm text-white/85 mt-1">
             ถ่ายรูปแซนวิชสีตามอารมณ์ลง IG Story แล้วแท็ก{' '}
-            <span className="font-semibold text-white">@moodwhich.kmuttnative</span> ลุ้นรับแซนวิชฟรี 1 ชิ้น
+            <span className="font-semibold text-white">@moodwhich.kmuttnative</span> ลุ้นรับแซนวิชฟรีครึ่งชิ้น
           </p>
         </div>
 
