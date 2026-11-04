@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toPng } from 'html-to-image';
 import confetti from 'canvas-confetti';
 import { sfx } from '@/lib/sound';
-import { Download, Share2, Copy, RotateCcw, Sparkles, Coffee, Check, Eye, Camera } from 'lucide-react';
+import { Download, Share2, Copy, RotateCcw, Sparkles, Coffee, Check, Eye } from 'lucide-react';
 
 interface ResultViewProps {
   mood: MoodProfile;
@@ -50,53 +50,113 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
     }, 3200);
   };
 
-  // Generate and Download Story PNG
+  // The story PNG is rendered ahead of time. Phones only open the share sheet
+  // when navigator.share() runs right after the tap; rendering after the tap
+  // can take long enough for Safari to refuse it.
+  const storyFile = useRef<{ key: string; file: File } | null>(null);
+  const pending = useRef<Promise<File | null> | null>(null);
+
+  const renderStoryFile = (): Promise<File | null> => {
+    if (storyFile.current?.key === mood.id) return Promise.resolve(storyFile.current.file);
+    if (pending.current) return pending.current;
+    const node = storyCardRef.current;
+    if (!node) return Promise.resolve(null);
+    const key = mood.id;
+    const job = (async () => {
+      try {
+        const opts = { quality: 0.95, pixelRatio: 2, cacheBust: true };
+        // The first capture can miss fonts and images on Safari, so draw once and keep the second.
+        await toPng(node, opts);
+        const blob = await (await fetch(await toPng(node, opts))).blob();
+        const file = new File([blob], `moodwhich-${key}.png`, { type: 'image/png' });
+        storyFile.current = { key, file };
+        return file;
+      } catch (err) {
+        console.error('Failed to generate image', err);
+        return null;
+      } finally {
+        pending.current = null;
+      }
+    })();
+    pending.current = job;
+    return job;
+  };
+
+  useEffect(() => {
+    storyFile.current = null;
+    let alive = true;
+    const t = setTimeout(async () => {
+      try {
+        await document.fonts?.ready;
+      } catch {
+        // fonts API missing: render anyway
+      }
+      if (alive) void renderStoryFile();
+    }, 900);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mood.id]);
+
+  const saveFile = (file: File) => {
+    const url = URL.createObjectURL(file);
+    const link = document.createElement('a');
+    link.download = `moodwhich-${mood.id}-${Date.now()}.png`;
+    link.href = url;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  };
+
+  // Save the card as a PNG (desktop, or when the user wants the file).
   const handleDownloadStoryImage = async () => {
-    if (!storyCardRef.current) return;
     sfx.shutter();
     setIsGeneratingImage(true);
-    showToast('กำลังสร้าง Story Card ขนาด 9:16...');
-
     try {
-      const dataUrl = await toPng(storyCardRef.current, {
-        quality: 0.95,
-        pixelRatio: 2,
-        cacheBust: true,
-      });
-
-      const link = document.createElement('a');
-      link.download = `moodwhich-${mood.id}-${Date.now()}.png`;
-      link.href = dataUrl;
-      link.click();
+      const file = await renderStoryFile();
+      if (!file) throw new Error('render failed');
+      saveFile(file);
       showToast('บันทึกรูปแล้ว! แท็ก @moodwhich.kmuttnative ลง IG Story ลุ้นแซนวิชฟรีครึ่งชิ้น');
-    } catch (err) {
-      console.error('Failed to generate image', err);
+    } catch {
       showToast('เกิดข้อผิดพลาดในการสร้างรูปภาพ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setIsGeneratingImage(false);
     }
   };
 
-  // Web Share API
-  const handleNativeShare = async () => {
-    sfx.tap();
-    const shareData = {
-      title: `วันนี้อารมณ์ของฉันคือ "${mood.chibiName}"`,
-      text: `วันนี้ฉันคือ ${mood.chibiName} ${mood.emoji} เมนูที่ใช่: ${mood.sandwichName} 🥪 มาหาแซนวิชตามอารมณ์ของคุณกัน! ${mood.hashtag}`,
-      url: typeof window !== 'undefined' ? window.location.href : 'https://mood-which.vercel.app',
-    };
+  // Hand the card image to the phone's share sheet. Instagram appears there with a Stories option,
+  // so nothing is saved to the camera roll first. Websites cannot open the Instagram story editor
+  // directly; the share sheet is the closest thing the browser allows.
+  const handleShareStory = async () => {
+    sfx.shutter();
+    const file = storyFile.current?.key === mood.id ? storyFile.current.file : null;
+    const canShareFiles = (f: File) =>
+      typeof navigator !== 'undefined' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [f] });
 
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch {
-        // Share was cancelled or failed
-      }
-    } else {
-      if (typeof window !== 'undefined') {
-        navigator.clipboard.writeText(window.location.href);
-        showToast('คัดลอกลิงก์แล้ว! ส่งให้เพื่อนได้เลย');
-      }
+    if (!file) {
+      // Still rendering: wait for it, then ask for one more tap (the first tap's permission may have run out).
+      setIsGeneratingImage(true);
+      showToast('กำลังเตรียมรูป... แตะอีกครั้งเมื่อพร้อม');
+      await renderStoryFile();
+      setIsGeneratingImage(false);
+      return;
+    }
+
+    if (!canShareFiles(file)) {
+      // Desktop and in-app browsers without file sharing: fall back to saving the image.
+      saveFile(file);
+      showToast('เครื่องนี้แชร์ตรงไม่ได้ บันทึกรูปให้แล้ว เปิด IG แล้วเลือกรูปลง Story ได้เลย');
+      return;
+    }
+
+    try {
+      await navigator.share({ files: [file], title: `วันนี้ฉันคือ ${mood.chibiName}` });
+      showToast('เลือก Instagram > Stories แล้วแท็ก @moodwhich.kmuttnative ลุ้นแซนวิชฟรีครึ่งชิ้น');
+    } catch (err) {
+      if ((err as DOMException)?.name === 'AbortError') return; // user closed the sheet
+      saveFile(file);
+      showToast('แชร์ไม่สำเร็จ บันทึกรูปให้แล้ว เปิด IG แล้วเลือกรูปลง Story ได้เลย');
     }
   };
 
@@ -230,22 +290,23 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
         </div>
 
         <button
-          onClick={handleDownloadStoryImage}
+          onClick={handleShareStory}
           disabled={isGeneratingImage}
           className="btn-sticker w-full py-4 px-6 rounded-2xl font-black text-base flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-70"
         >
-          <Camera className="w-5 h-5" />
-          <span>{isGeneratingImage ? 'กำลังเตรียมรูปภาพ...' : 'บันทึกการ์ด IG Story (9:16)'}</span>
-          <Download className="w-4 h-4" />
+          <InstagramIcon className="w-5 h-5" />
+          <span>{isGeneratingImage ? 'กำลังเตรียมรูปภาพ...' : 'แชร์ลง IG Story'}</span>
+          <Share2 className="w-4 h-4" />
         </button>
 
         <div className="grid grid-cols-2 gap-3">
           <button
-            onClick={handleNativeShare}
-            className="py-3 px-4 rounded-2xl bg-ink text-yellow font-bold text-sm flex items-center justify-center gap-2 hover:bg-black transition-colors active:scale-95 cursor-pointer"
+            onClick={handleDownloadStoryImage}
+            disabled={isGeneratingImage}
+            className="py-3 px-4 rounded-2xl bg-ink text-yellow font-bold text-sm flex items-center justify-center gap-2 hover:bg-black transition-colors active:scale-95 cursor-pointer disabled:opacity-70"
           >
-            <Share2 className="w-4 h-4" />
-            <span>แชร์ผลลัพธ์</span>
+            <Download className="w-4 h-4" />
+            <span>บันทึกรูป</span>
           </button>
           <button
             onClick={handleCopyCaption}
