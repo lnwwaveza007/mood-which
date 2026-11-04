@@ -25,6 +25,17 @@ export const PAYMENT_IS_TEST = !process.env.NEXT_PUBLIC_PROMPTPAY_ID;
 
 export const MOODS: FundamentalMood[] = ['happy', 'boring', 'angry', 'sad'];
 
+/**
+ * Starting stock per filling, in whole sandwich pieces (a piece is two halves).
+ * Staff can change these, or mark a filling out of stock, in the back office.
+ */
+export const DEFAULT_STOCK_PIECES: Record<FundamentalMood, number> = {
+  angry: 30, // ไก่ป๊อป + ซอสซัมยัง + ชีส
+  boring: 12, // ปูอัด + ไข่คน + มายองเนส
+  happy: 4, // หมูหยอง + โบโลน่า + ซอสสลัดโบราณ
+  sad: 4, // ทูน่า + ไข่คน + มายองเนส
+};
+
 /** One sandwich is two halves. Same filling twice = a full piece, two fillings = a MIX piece. */
 export const FILLING_SHORT: Record<FundamentalMood, string> = {
   happy: 'หมูหยอง',

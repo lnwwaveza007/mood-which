@@ -4,7 +4,9 @@ import { checkPin, ServiceError } from '@/lib/draw/service';
 import { normalizeHandle } from '@/lib/draw/logic';
 import { promptpayPayload } from './promptpay';
 import { deleteSlips, readSlip, saveSlip, sniffImage } from './slips';
-import { Cart, countPieces, itemById, MAX_PIECES_PER_ORDER, PREORDER_DEADLINE, priceFor, PROMPTPAY_ID } from './menu';
+import { FundamentalMood } from '@/data/quizData';
+import { Cart, countPieces, itemById, MAX_PIECES_PER_ORDER, MOODS, PREORDER_DEADLINE, priceFor, PROMPTPAY_ID } from './menu';
+import { anyPieceLeft, defaultStock, Halves, halvesOfCart, leftHalves, StockConfig } from './stock';
 import { ClosedReason, emptyPreorder, Order, OrderStatus, PreorderState } from './types';
 
 const store = docStore<PreorderState>('preorder', emptyPreorder);
@@ -15,16 +17,34 @@ const MIN_SLIP_BYTES = 2 * 1024;
 const clean = (v: FormDataEntryValue | null, max: number) =>
   typeof v === 'string' ? v.trim().replace(/\s+/g, ' ').slice(0, max) : '';
 
-const reserved = (s: PreorderState) =>
-  s.orders.filter((o) => o.status !== 'rejected').reduce((sum, o) => sum + o.pieces, 0);
+/** Data saved before per-filling stock existed gets the default limits. Mutates and returns the state. */
+function withStock(s: PreorderState): PreorderState & { config: { stock: StockConfig } } {
+  s.config.stock ??= defaultStock();
+  return s as PreorderState & { config: { stock: StockConfig } };
+}
+
+const live = (s: PreorderState) => s.orders.filter((o) => o.status !== 'rejected');
+
+const reserved = (s: PreorderState) => live(s).reduce((sum, o) => sum + o.pieces, 0);
 
 const piecesLeft = (s: PreorderState) => Math.max(0, s.config.maxPieces - reserved(s));
+
+/** Halves still sellable per filling. Rejected orders give theirs back. */
+function stockLeft(s: PreorderState): Halves {
+  const used = halvesOfCart(
+    live(s).reduce<Cart>((all, o) => {
+      for (const [id, qty] of Object.entries(o.items)) all[id] = (all[id] ?? 0) + qty;
+      return all;
+    }, {}),
+  );
+  return leftHalves(withStock(s).config.stock, used);
+}
 
 function closedReason(s: PreorderState, now: number): ClosedReason | null {
   if (!promptpayPayload(PROMPTPAY_ID)) return 'no_payment';
   if (!s.config.open) return 'closed';
   if (now > PREORDER_DEADLINE) return 'deadline';
-  if (piecesLeft(s) <= 0) return 'sold_out';
+  if (piecesLeft(s) <= 0 || !anyPieceLeft(stockLeft(s))) return 'sold_out';
   return null;
 }
 
@@ -32,7 +52,14 @@ function closedReason(s: PreorderState, now: number): ClosedReason | null {
 export async function publicStatus() {
   const s = await store.read();
   const reason = closedReason(s, Date.now());
-  return { ok: true as const, open: reason === null, reason, piecesLeft: piecesLeft(s) };
+  return { ok: true as const, open: reason === null, reason, piecesLeft: piecesLeft(s), stock: stockLeft(s) };
+}
+
+/** Fillings a cart needs more of than is left, in menu order. */
+function shortFillings(s: PreorderState, items: Cart): FundamentalMood[] {
+  const left = stockLeft(s);
+  const need = halvesOfCart(items);
+  return MOODS.filter((m) => need[m] > left[m]);
 }
 
 function parseItems(raw: FormDataEntryValue | null): Cart | null {
@@ -51,6 +78,13 @@ function parseItems(raw: FormDataEntryValue | null): Cart | null {
   }
   const pieces = countPieces(cart);
   return pieces >= 1 && pieces <= MAX_PIECES_PER_ORDER ? cart : null;
+}
+
+/** Reply for an order that no longer fits the stock: too many pieces overall, or a filling ran short. */
+function soldOutReply(s: PreorderState, items: Cart, pieces: number) {
+  const short = shortFillings(s, items);
+  if (pieces <= piecesLeft(s) && short.length === 0) return null;
+  return { ok: false, error: 'sold_out', piecesLeft: piecesLeft(s), short, stock: stockLeft(s) } as const;
 }
 
 const receipt = (o: Order) => ({ ok: true as const, code: o.code, pieces: o.pieces, total: o.total });
@@ -84,7 +118,8 @@ export async function createOrder(form: FormData) {
   if (earlier) return receipt(earlier);
   const closed = closedReason(before, Date.now());
   if (closed && closed !== 'sold_out') return { ok: false, error: 'closed' } as const;
-  if (pieces > piecesLeft(before)) return { ok: false, error: 'sold_out', piecesLeft: piecesLeft(before) } as const;
+  const soldOutNow = soldOutReply(before, items, pieces);
+  if (soldOutNow) return soldOutNow;
 
   // The upload stays outside the lock: it is slow and would block every other order.
   const ext = type.split('/')[1];
@@ -99,9 +134,8 @@ export async function createOrder(form: FormData) {
     if (closedNow && closedNow !== 'sold_out') {
       return { unused: true, reply: { ok: false, error: 'closed' } as const };
     }
-    if (pieces > piecesLeft(s)) {
-      return { unused: true, reply: { ok: false, error: 'sold_out', piecesLeft: piecesLeft(s) } as const };
-    }
+    const gone = soldOutReply(s, items, pieces);
+    if (gone) return { unused: true, reply: gone };
     s.seq += 1;
     const order: Order = {
       code: `PO-${String(s.seq).padStart(3, '0')}`,
@@ -149,12 +183,24 @@ function summary(s: PreorderState) {
       duplicateOf,
     };
   });
-  return { ok: true as const, config: s.config, piecesLeft: piecesLeft(s), orders: orders.reverse() };
+  return {
+    ok: true as const,
+    config: withStock(s).config,
+    piecesLeft: piecesLeft(s),
+    stockLeft: stockLeft(s),
+    orders: orders.reverse(),
+  };
 }
 
 export type StaffAction =
   | { action: 'status' }
-  | { action: 'settings'; open?: boolean; maxPieces?: number }
+  | {
+      action: 'settings';
+      open?: boolean;
+      maxPieces?: number;
+      /** Per filling: `pieces` is the sell limit in whole pieces (halves allowed, e.g. 3.5); `open: false` = out of stock. */
+      stock?: Partial<Record<FundamentalMood, { open?: boolean; pieces?: number }>>;
+    }
   | { action: 'review'; code: string; status: OrderStatus }
   | { action: 'delivered'; code: string; delivered: boolean }
   | { action: 'reset'; confirmPin: string };
@@ -165,6 +211,7 @@ export async function staff(pin: unknown, req: StaffAction) {
     const now = Date.now();
     const bad = checkPin(s, pin, now);
     if (bad) return bad;
+    withStock(s);
 
     switch (req.action) {
       case 'status':
@@ -176,6 +223,25 @@ export async function staff(pin: unknown, req: StaffAction) {
             return { ok: false, error: 'bad_request' } as ServiceError;
           }
           s.config.maxPieces = req.maxPieces;
+        }
+        if (req.stock !== undefined) {
+          if (!req.stock || typeof req.stock !== 'object') return { ok: false, error: 'bad_request' } as ServiceError;
+          const stock = withStock(s).config.stock;
+          for (const [mood, change] of Object.entries(req.stock)) {
+            if (!MOODS.includes(mood as FundamentalMood) || !change || typeof change !== 'object') {
+              return { ok: false, error: 'bad_request' } as ServiceError;
+            }
+            const entry = stock[mood as FundamentalMood];
+            if (change.open !== undefined) {
+              if (typeof change.open !== 'boolean') return { ok: false, error: 'bad_request' } as ServiceError;
+              entry.open = change.open;
+            }
+            if (change.pieces !== undefined) {
+              const halves = typeof change.pieces === 'number' ? change.pieces * 2 : NaN;
+              if (!Number.isInteger(halves) || halves < 0 || halves > 10_000) return { ok: false, error: 'bad_request' } as ServiceError;
+              entry.halves = halves;
+            }
+          }
         }
         break;
       case 'review':

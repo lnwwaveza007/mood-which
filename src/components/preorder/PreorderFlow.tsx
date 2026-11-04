@@ -34,8 +34,20 @@ import {
   unitPrice,
 } from '@/lib/preorder/menu';
 import { promptpayPayload } from '@/lib/preorder/promptpay';
+import { fits, Halves, halvesOfCart } from '@/lib/preorder/stock';
 import { ClosedReason } from '@/lib/preorder/types';
 import SlipGuide from './SlipGuide';
+
+/** Show "เหลือ N ครึ่ง" on a filling once this few halves are left. */
+const LOW_STOCK_HALVES = 8;
+
+interface PublicStatus {
+  open: boolean;
+  reason: ClosedReason | null;
+  piecesLeft: number;
+  /** Halves still sellable per filling. */
+  stock: Halves;
+}
 
 const SLIP_MAX_SIDE = 1600;
 const SLIP_MIN_SIDE = 300;
@@ -125,7 +137,22 @@ function Step({ n, title }: { n: number; title: string }) {
 }
 
 /** One row of four fillings for a single half of the sandwich. */
-function HalfPicker({ title, hint, value, onPick }: { title: string; hint?: string; value: FundamentalMood; onPick: (m: FundamentalMood) => void }) {
+function HalfPicker({
+  title,
+  hint,
+  value,
+  left,
+  canPick,
+  onPick,
+}: {
+  title: string;
+  hint?: string;
+  value: FundamentalMood;
+  /** Halves of each filling still available to this customer (stock minus what is already in the cart). */
+  left: Halves;
+  canPick: (m: FundamentalMood) => boolean;
+  onPick: (m: FundamentalMood) => void;
+}) {
   return (
     <div>
       <p className="text-sm font-black">{title}</p>
@@ -133,16 +160,19 @@ function HalfPicker({ title, hint, value, onPick }: { title: string; hint?: stri
       <div role="radiogroup" aria-label={title} className="mt-1.5 grid grid-cols-4 gap-2">
         {MOODS.map((m) => {
           const on = value === m;
+          const ok = canPick(m);
           return (
+            <div key={m} className="relative">
             <button
-              key={m}
               type="button"
               role="radio"
               aria-checked={on}
+              aria-disabled={!ok}
+              disabled={!ok}
               onClick={() => onPick(m)}
-              className={`relative rounded-xl px-1 py-2 min-h-[5.25rem] flex flex-col items-center justify-center text-center cursor-pointer border-[3px] transition-transform ${
-                on ? 'border-ink scale-[1.04] shadow-[3px_3px_0_#0D0D0D]' : 'border-ink/15'
-              }`}
+              className={`relative w-full h-full rounded-xl px-1 py-2 min-h-[5.25rem] flex flex-col items-center justify-center text-center border-[3px] transition-transform ${
+                ok ? 'cursor-pointer' : 'cursor-not-allowed opacity-45 grayscale'
+              } ${on ? 'border-ink scale-[1.04] shadow-[3px_3px_0_#0D0D0D]' : 'border-ink/15'}`}
               style={{ backgroundColor: BASE_SANDWICH_FILLINGS[m].color }}
             >
               {PREMIUM_MOODS.includes(m) && (
@@ -166,6 +196,19 @@ function HalfPicker({ title, hint, value, onPick }: { title: string; hint?: stri
               </span>
               <span className="text-[10px] leading-tight text-ink/70">{BASE_SANDWICH_FILLINGS[m].labelTh}</span>
             </button>
+            {/* Outside the button so the dimming of a sold-out tile does not wash these out. */}
+            {left[m] <= 0 ? (
+              <span className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 -rotate-6 border-y-2 border-ink bg-alert py-0.5 text-center text-[12px] font-black text-white">
+                หมด
+              </span>
+            ) : (
+              left[m] <= LOW_STOCK_HALVES && (
+                <span className="pointer-events-none absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded border-2 border-ink bg-yellow px-1 text-[10px] font-black leading-tight text-ink">
+                  เหลือ {left[m]} ครึ่ง
+                </span>
+              )
+            )}
+            </div>
           );
         })}
       </div>
@@ -176,7 +219,7 @@ function HalfPicker({ title, hint, value, onPick }: { title: string; hint?: stri
 export default function PreorderFlow({ preset }: { preset?: string }) {
   const presetItem = preset ? itemById(preset) : undefined;
 
-  const [status, setStatus] = useState<{ open: boolean; reason: ClosedReason | null; piecesLeft: number } | null>(null);
+  const [status, setStatus] = useState<PublicStatus | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [cart, setCart] = useState<Cart>(() => (presetItem ? { [presetItem.id]: 1 } : {}));
   // The two halves of the sandwich being built. Half 2 follows half 1 until the customer picks a different filling.
@@ -199,10 +242,22 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
   const qrBox = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    api<{ open: boolean; reason: ClosedReason | null; piecesLeft: number }>('/api/preorder').then((res) => {
-      if (res.ok) setStatus(res);
-      else setLoadFailed(true);
+    api<PublicStatus>('/api/preorder').then((res) => {
+      if (!res.ok) {
+        setLoadFailed(true);
+        return;
+      }
+      setStatus(res);
+      // Start on a filling that is in stock, and drop a preset piece that sold out since the quiz.
+      const first = MOODS.find((m) => res.stock[m] >= 2);
+      if (!presetItem && first) {
+        setHalf1(first);
+        setHalf2(first);
+      }
+      if (presetItem && !fits(res.stock, presetItem.moods[0], presetItem.moods[presetItem.moods.length - 1])) setCart({});
     });
+    // Runs once on load; the preset never changes while the page is open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -228,10 +283,27 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
       return next;
     });
 
+  // Stock left for this customer: what the shop still has, minus what is already in the cart.
+  const left = useMemo<Halves>(() => {
+    const inCart = halvesOfCart(cart);
+    const stock = status?.stock;
+    const out = {} as Halves;
+    for (const m of MOODS) out[m] = stock ? stock[m] - inCart[m] : 999;
+    return out;
+  }, [cart, status]);
+
+  // Half 2 follows half 1 while linked, so picking half 1 may also need a second half of the same filling.
+  const canPick1 = (m: FundamentalMood) => fits(left, m, half2) || (linked && MOODS.some((o) => fits(left, m, o)));
+  const canPick2 = (m: FundamentalMood) => fits(left, half1, m);
+
   const pick1 = (m: FundamentalMood) => {
     sfx.select(MOODS.indexOf(m));
     setHalf1(m);
-    if (linked) setHalf2(m);
+    if (!linked) return;
+    // Same filling twice if there is enough of it; otherwise pair it with one that has a half to spare (a MIX).
+    const partner = fits(left, m, m) ? m : (MOODS.find((o) => fits(left, m, o)) ?? m);
+    setHalf2(partner);
+    setLinked(partner === m);
   };
   const pick2 = (m: FundamentalMood) => {
     sfx.select(MOODS.indexOf(m));
@@ -239,6 +311,9 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
     setLinked(m === half1);
   };
 
+  const canBuild = fits(left, half1, half2);
+  /** Fillings the cart needs more of than the shop has left (stock changed while the page was open). */
+  const overStock = MOODS.filter((m) => left[m] < 0);
   const isMix = half1 !== half2;
   const building = {
     moods: isMix ? [half1, half2] : [half1],
@@ -303,6 +378,7 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (sending) return;
+    if (overStock.length > 0) return fail('มีไส้ที่เหลือไม่พอในตะกร้า ลดจำนวนหรือเปลี่ยนไส้ก่อนสั่ง');
     if (!name.trim()) return fail(ERROR_TEXT.bad_name);
     if (!/^0\d{8,9}$/.test(phone.replace(/\D/g, ''))) return fail(ERROR_TEXT.bad_phone);
     if (!slip) return fail('แนบรูปสลิปก่อนยืนยันนะ');
@@ -319,7 +395,16 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
     form.set('items', JSON.stringify(cart));
     form.set('slip', slip, 'slip.jpg');
 
-    let res: { ok: boolean; error?: string; code?: string; pieces?: number; total?: number; piecesLeft?: number };
+    let res: {
+      ok: boolean;
+      error?: string;
+      code?: string;
+      pieces?: number;
+      total?: number;
+      piecesLeft?: number;
+      short?: FundamentalMood[];
+      stock?: Halves;
+    };
     try {
       const reply = await fetch('/api/preorder', { method: 'POST', body: form });
       res = await reply.json();
@@ -335,9 +420,15 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
       return;
     }
     if (res.error === 'sold_out') {
-      const left = res.piecesLeft ?? 0;
-      setStatus((s) => (s ? { ...s, piecesLeft: left } : s));
-      fail(left > 0 ? `เหลือให้สั่งได้อีก ${left} ชิ้น ลองลดจำนวนลง แล้วทักร้านเรื่องยอดที่โอนเกิน` : CLOSED_TEXT.sold_out);
+      const piecesLeft = res.piecesLeft ?? 0;
+      const gone = res.short ?? [];
+      setStatus((s) => (s ? { ...s, piecesLeft, stock: res.stock ?? s.stock } : s));
+      if (gone.length > 0) {
+        // The page already greys these out and flags the cart, so the customer can fix it and send again.
+        fail(`${gone.map((m) => FILLING_SHORT[m]).join(', ')} เหลือไม่พอสำหรับออเดอร์นี้ ลดหรือเปลี่ยนไส้ในตะกร้า แล้วกดยืนยันอีกครั้ง ถ้าโอนเงินไปแล้วเก็บสลิปไว้ และทักร้านทาง IG`);
+      } else {
+        fail(piecesLeft > 0 ? `เหลือให้สั่งได้อีก ${piecesLeft} ชิ้น ลองลดจำนวนลง แล้วทักร้านเรื่องยอดที่โอนเกิน` : CLOSED_TEXT.sold_out);
+      }
       return;
     }
     fail(ERROR_TEXT[res.error ?? ''] ?? 'มีบางอย่างผิดพลาด ลองกดยืนยันอีกครั้ง');
@@ -438,13 +529,18 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
               </p>
 
               <div className={`${card} space-y-4`}>
-                <HalfPicker title="ครึ่งที่ 1" value={half1} onPick={pick1} />
+                <HalfPicker title="ครึ่งที่ 1" value={half1} left={left} canPick={canPick1} onPick={pick1} />
                 <HalfPicker
                   title="ครึ่งที่ 2"
                   hint="ไส้เดียวกับครึ่งที่ 1 = ไส้เดียวทั้งชิ้น · เลือกไส้อื่น = MIX 2 ไส้"
                   value={half2}
+                  left={left}
+                  canPick={canPick2}
                   onPick={pick2}
                 />
+                {MOODS.some((m) => left[m] === 1) && (
+                  <p className="text-xs font-bold text-ink/70">ไส้ที่เหลือ 1 ครึ่ง ใช้ได้เฉพาะชิ้น MIX</p>
+                )}
 
                 <div className="rounded-xl overflow-hidden border-2 border-ink">
                   <div className="relative h-28 flex items-end justify-center" style={{ background: sandwichBackground(building.moods) }}>
@@ -463,7 +559,7 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
                 <button
                   type="button"
                   onClick={addPiece}
-                  disabled={pieces >= limit}
+                  disabled={pieces >= limit || !canBuild}
                   className="btn-sticker w-full rounded-full py-3 font-black text-base cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {justAdded ? (
@@ -476,7 +572,8 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
                     </>
                   )}
                 </button>
-                {pieces >= limit && <p className="text-xs font-bold text-alert text-center">สั่งได้สูงสุด {limit} ชิ้นต่อออเดอร์</p>}
+                {!canBuild && <p className="text-xs font-bold text-alert text-center">ไส้ที่เลือกหมดแล้ว เลือกไส้อื่นแทนนะ</p>}
+                {canBuild && pieces >= limit && <p className="text-xs font-bold text-alert text-center">สั่งได้สูงสุด {limit} ชิ้นต่อออเดอร์</p>}
               </div>
 
               <div className="mt-4">
@@ -496,10 +593,15 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
                               {m.isMix && <span className="inline-block rounded px-1.5 py-0.5 text-[10px] font-black bg-yellow text-ink">MIX 2 ไส้</span>}
                             </p>
                           </div>
-                          <Stepper label={m.title} qty={cart[m.id] ?? 0} canAdd={pieces < limit} onChange={(n) => setQty(m.id, n)} />
+                          <Stepper label={m.title} qty={cart[m.id] ?? 0} canAdd={pieces < limit && fits(left, m.moods[0], m.moods[m.moods.length - 1])} onChange={(n) => setQty(m.id, n)} />
                         </li>
                       ))}
                     </ul>
+                    {overStock.length > 0 && (
+                      <p role="alert" className="mt-2 rounded-lg bg-alert p-2 text-xs font-bold text-white">
+                        {overStock.map((m) => FILLING_SHORT[m]).join(', ')} เหลือไม่พอสำหรับตะกร้านี้ ลดจำนวนหรือเปลี่ยนไส้ก่อนสั่ง
+                      </p>
+                    )}
                     <p className="mt-2 pt-2 border-t-2 border-ink flex items-end justify-between text-sm">
                       <span>{pieces} ชิ้น</span>
                       <span className="font-black text-2xl">{total}.-</span>

@@ -58,6 +58,7 @@ Interactive Web Quiz สไตล์ **Inside-Out** ที่พาผู้เ�
 
 - Customer page: `/preorder`. Staff page: `/preorder/admin` (same PIN as the draw, `DRAW_ADMIN_PIN`).
 - Sale rules (deadline, event details, prices, order limit) are in `src/lib/preorder/menu.ts`.
+- Stock is counted per filling (`DEFAULT_STOCK_PIECES` in `menu.ts`: ไก่ป๊อป 30, ปูอัด+ไข่คน 12, หมูหยอง 4, ทูน่า 4 pieces). One piece is 2 halves: a single-filling piece uses 2 halves of it, a MIX piece 1 half of each. On the staff page you can change each limit or mark a filling out of stock; the customer page greys it out and the server refuses orders that need more than is left. Rejected orders give their stock back. The defaults apply only to a fresh store; after that the staff page is the source of truth.
 - Orders are stored in Upstash Redis. Slips are stored in a private Vercel Blob store.
 - Without Redis and Blob, local dev keeps everything in memory. Production refuses orders instead.
 
