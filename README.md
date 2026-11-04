@@ -51,3 +51,22 @@ Interactive Web Quiz สไตล์ **Inside-Out** ที่พาผู้เ�
 - **Image Generation:** `html-to-image` (Ultra high-res 9:16 Story Card)
 - **QR Code:** `qrcode.react` (Dynamic SVG QR)
 - **Icons:** Lucide React
+
+---
+
+## 🧾 Pre-order
+
+- Customer page: `/preorder`. Staff page: `/preorder/admin` (same PIN as the draw, `DRAW_ADMIN_PIN`).
+- Sale rules (deadline, event details, prices, order limit) are in `src/lib/preorder/menu.ts`.
+- Orders are stored in Upstash Redis. Slips are stored in a private Vercel Blob store.
+- Without Redis and Blob, local dev keeps everything in memory. Production refuses orders instead.
+
+Before launch, set these on Vercel, then redeploy:
+
+| Variable | Value |
+|---|---|
+| `NEXT_PUBLIC_PROMPTPAY_ID` | PromptPay phone (10 digits), national or tax ID (13), or e-wallet (15) |
+| `NEXT_PUBLIC_PROMPTPAY_NAME` | Account name that customers see in their bank app |
+| `BLOB_STORE_ID` | Added when you connect the Blob store |
+
+After the event, use **ลบข้อมูลทั้งหมด** on the staff page. The customer page promises that this data is deleted.

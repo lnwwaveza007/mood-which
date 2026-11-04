@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
+import Link from 'next/link';
 import { BASE_SANDWICH_FILLINGS, MoodProfile } from '@/data/quizData';
 import { sandwichMoods, sandwichBackground } from '@/data/sandwich';
+import { pieceId, unitPrice } from '@/lib/preorder/menu';
 import ChibiSticker from './ChibiSticker';
 import StoryCard from './StoryCard';
 import { Sparkle, PromoBurst, InstagramIcon } from './Decor';
@@ -182,7 +184,7 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
           </div>
           <p className="mt-3 text-xs sm:text-sm font-medium">{mood.fillingDesc}</p>
           <div className="mt-4 flex items-end gap-2">
-            <span className="font-black text-5xl leading-none">35.-</span>
+            <span className="font-black text-5xl leading-none">{unitPrice(menuMoods)}.-</span>
             <span className="text-xs font-bold pb-1">/ ชิ้น</span>
           </div>
         </div>
@@ -253,6 +255,13 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
             <span>{copiedCaption ? 'คัดลอกแล้ว!' : 'คัดลอกแคปชัน'}</span>
           </button>
         </div>
+
+        <Link
+          href={`/preorder?preset=${encodeURIComponent(pieceId(menuMoods[0], menuMoods[menuMoods.length - 1]))}`}
+          className="btn-sticker block text-center rounded-full py-3 font-black text-base"
+        >
+          พรีออเดอร์แซนวิชนี้
+        </Link>
 
         <a
           href="https://www.instagram.com/moodwhich.kmuttnative/"

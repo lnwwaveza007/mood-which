@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import {
   MOOD_PROFILES,
   QUIZ_QUESTIONS,
@@ -17,6 +18,7 @@ import { sfx, startMusic } from '@/lib/sound';
 import { Sparkle, GooglyEyes, PromoBurst, SectionTag, InstagramIcon } from '@/components/Decor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, MapPin } from 'lucide-react';
+import { DEADLINE_LABEL, EVENT_DATE, PREMIUM_PRICE } from '@/lib/preorder/menu';
 
 type ScreenState = 'landing' | 'quiz' | 'calculating' | 'result';
 
@@ -103,7 +105,18 @@ export default function Home() {
           <SectionTag />
         </button>
         <div className="flex items-center gap-3">
-          <span className="text-[11px] sm:text-sm font-semibold text-yellow">แซนวิชตามอารมณ์</span>
+          <span className={`text-[11px] sm:text-sm font-semibold text-yellow ${screenState === 'landing' ? 'hidden sm:inline' : ''}`}>
+            แซนวิชตามอารมณ์
+          </span>
+          {screenState === 'landing' && (
+            <Link
+              href="/preorder"
+              className="inline-flex items-center gap-1.5 rounded-full border-2 border-ink bg-alert px-3 py-1 text-[11px] font-bold text-white shadow-[2px_2px_0_#0D0D0D] sm:text-sm"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-white motion-safe:animate-pulse" aria-hidden="true" />
+              พรีออเดอร์
+            </Link>
+          )}
           <SoundToggle />
         </div>
       </header>
@@ -198,7 +211,7 @@ function Landing({ onStart }: { onStart: () => void }) {
   return (
     <div className="w-full max-w-5xl mx-auto px-4 sm:px-6">
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <section className="relative pt-6 pb-10 sm:pb-14">
+      <section className="relative pt-6 pb-32 sm:pb-14">
         {HERO_CHIBIS.map(({ mood, className }, i) => (
           <motion.div
             key={mood}
@@ -253,6 +266,30 @@ function Landing({ onStart }: { onStart: () => void }) {
             <ArrowRight className="w-6 h-6" strokeWidth={3} />
           </motion.button>
           <p className="mt-3 text-xs text-white/70">ใช้เวลาไม่ถึง 1 นาที · ได้การ์ดแชร์ลง IG Story</p>
+          <Link
+            href="/preorder"
+            className="group relative mt-7 mx-auto flex w-full max-w-sm items-center gap-3 rounded-2xl border-[3px] border-ink bg-white px-4 py-3.5 text-left text-ink shadow-[6px_6px_0_#0D0D0D] transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0_#0D0D0D]"
+          >
+            <span className="absolute -top-3.5 -left-2 -rotate-6 border-2 border-ink bg-alert px-2 py-0.5 font-label text-[11px] font-bold tracking-wider text-white">
+              NEW
+            </span>
+            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4" aria-hidden="true">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-alert opacity-75 motion-safe:animate-ping" />
+              <span className="relative inline-flex h-4 w-4 rounded-full border-2 border-ink bg-alert" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-xl font-black leading-tight sm:text-2xl">พรีออเดอร์แซนวิช</span>
+              <span className="mt-0.5 block text-xs font-semibold leading-snug sm:text-sm">
+                สั่งก่อน โอนผ่านพร้อมเพย์ รับวันงาน {EVENT_DATE}
+              </span>
+              <span className="mt-1 inline-block bg-ink px-1.5 py-0.5 text-[11px] font-bold text-yellow">
+                ปิดรับ {DEADLINE_LABEL}
+              </span>
+            </span>
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-alert text-white transition-transform group-hover:translate-x-1">
+              <ArrowRight className="h-5 w-5" strokeWidth={3} />
+            </span>
+          </Link>
         </div>
       </section>
 
@@ -261,6 +298,11 @@ function Landing({ onStart }: { onStart: () => void }) {
         <div>
           <p className="text-xl sm:text-2xl font-bold">ราคาชิ้นละ</p>
           <p className="font-black text-7xl sm:text-8xl leading-none tracking-tight">35.-</p>
+          <p className="mt-3 text-xs sm:text-sm max-w-xs">
+            <span className="ink-bar">
+              ไส้ไก่ป๊อป (รวมแบบ MIX) ชิ้นละ {PREMIUM_PRICE}.-
+            </span>
+          </p>
           <p className="mt-4 text-xs sm:text-sm max-w-xs">
             <span className="ink-bar">*แชะรูปแซนวิช แท็กร้านลง IG STORY</span>{' '}
             <span className="ink-bar">ลุ้นรับแซนวิชฟรีครึ่งชิ้น!</span>
@@ -327,7 +369,7 @@ function Landing({ onStart }: { onStart: () => void }) {
               วันนี้อารมณ์ปนกัน? จับคู่ 2 อารมณ์ในชิ้นเดียว
             </p>
             <p className="mt-1 text-sm sm:text-base font-medium">
-              เช่น สุข + โกรธ หรือ เศร้า + เฉย ๆ ได้ลอง 2 รสชาติในราคาเดียว <b>35.-</b>
+              เช่น สุข + โกรธ หรือ เศร้า + เฉย ๆ ได้ลอง 2 รสชาติในราคาเดียว <b>35.-</b> (ถ้ามีไก่ป๊อป <b>{PREMIUM_PRICE}.-</b>)
             </p>
           </div>
           <ChibiSticker moods={['happy', 'angry']} heightClass="h-32 sm:h-40" className="justify-self-center" />
