@@ -1,0 +1,4 @@
+# Not part of the site: raw phone photos/videos and local tool settings.
+# Without this, `vercel deploy` uploads the untracked media/ folder with every deployment.
+media/
+.claude/
