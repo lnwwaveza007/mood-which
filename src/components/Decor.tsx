@@ -24,7 +24,7 @@ export function GooglyEyes({ className = '' }: { className?: string }) {
   );
 }
 
-/** Yellow starburst: PROMOTION 67.- (2 ชิ้น ปกติ 70.-). Pass `relative` or `absolute` in className. */
+/** Yellow starburst: PROMOTION, a chance to win a free half sandwich (the IG story tag prize). Pass `relative` or `absolute` in className. */
 export function PromoBurst({ className = 'relative' }: { className?: string }) {
   return (
     <div className={`aspect-square ${className}`}>
@@ -34,9 +34,9 @@ export function PromoBurst({ className = 'relative' }: { className?: string }) {
         <span className="bg-ink text-white font-label font-semibold text-[0.62em] tracking-wide px-2 py-0.5 -rotate-3">
           PROMOTION
         </span>
-        <span className="font-black text-[2.6em] leading-[0.95] tracking-tight mt-1">67.-</span>
+        <span className="font-black text-[2.1em] leading-[0.95] tracking-tight mt-1">ลุ้นฟรี!</span>
         <span className="font-bold text-[0.78em] leading-tight">
-          <span className="text-alert">2 ชิ้น</span> ปกติ <span className="line-through">70.-</span>
+          แซนวิช<span className="text-alert">ครึ่งชิ้น</span>
         </span>
       </div>
     </div>

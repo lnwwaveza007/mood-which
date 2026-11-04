@@ -7,6 +7,12 @@ const STATUS: Record<string, number> = {
   wrong_pin: 401,
   locked: 429,
   not_configured: 503,
+  bad_name: 400,
+  bad_phone: 400,
+  bad_slip: 400,
+  too_large: 413,
+  closed: 409,
+  sold_out: 409,
 };
 
 /** JSON reply that is never cached: counters change on every spin. */

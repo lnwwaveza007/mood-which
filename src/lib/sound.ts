@@ -313,6 +313,34 @@ export const sfx = {
     bell(midi(88), t, 0.12);
     bell(midi(93), t + 0.1, 0.1);
   },
+
+  /** Add to cart: two quick coin-like blips going up. */
+  add() {
+    const t = at();
+    if (t === null) return;
+    tone(midi(79), t, 0.07, { type: 'square', gain: 0.1 });
+    tone(midi(86), t + 0.07, 0.16, { type: 'square', gain: 0.1 });
+    tone(midi(98), t + 0.07, 0.25, { type: 'sine', gain: 0.07 });
+  },
+
+  /** Something is wrong: two short low buzzes, soft enough not to startle. */
+  error() {
+    const t = at();
+    if (t === null) return;
+    tone(190, t, 0.13, { type: 'sawtooth', gain: 0.1 });
+    tone(150, t + 0.15, 0.2, { type: 'sawtooth', gain: 0.1 });
+  },
+
+  /** Order placed: cash drawer click, bright ka-ching, then a happy arpeggio. */
+  order() {
+    const t = at();
+    if (t === null) return;
+    noise(t, 0.05, { gain: 0.3, freq: 2800 });
+    tone(midi(100), t + 0.05, 0.5, { type: 'sine', gain: 0.12 });
+    tone(midi(105), t + 0.11, 0.6, { type: 'sine', gain: 0.1 });
+    [72, 76, 79, 84, 88].forEach((n, k) => pluck(midi(n), t + 0.28 + k * 0.07, 0.17));
+    bell(midi(96), t + 0.6, 0.09);
+  },
 };
 
 /* ── Mute state (shared with React via useSyncExternalStore) ──────── */

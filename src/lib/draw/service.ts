@@ -20,7 +20,7 @@ function expectedPin(): string | null {
 }
 
 /** Shared lockout: 3 wrong PINs and the booth waits 30 s (stops guessing a 4-digit PIN). */
-function checkPin(state: DrawState, supplied: unknown, now: number): ServiceError | null {
+export function checkPin(state: Pick<DrawState, 'pinFails' | 'lockUntil'>, supplied: unknown, now: number): ServiceError | null {
   const expected = expectedPin();
   if (!expected) return { ok: false, error: 'not_configured' };
   if (now < state.lockUntil) return { ok: false, error: 'locked', waitSec: Math.ceil((state.lockUntil - now) / 1000) };
