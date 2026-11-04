@@ -6,7 +6,8 @@ import { AlertTriangle, Check, RotateCcw, X } from 'lucide-react';
 import { SectionTag } from '@/components/Decor';
 import { BASE_SANDWICH_FILLINGS, FundamentalMood } from '@/data/quizData';
 import { api, ApiFail, errorText } from '@/lib/draw/client';
-import { Cart, itemById, MENU } from '@/lib/preorder/menu';
+import { Cart, FILLING_SHORT, itemById, MENU, MOODS } from '@/lib/preorder/menu';
+import { Halves, StockConfig } from '@/lib/preorder/stock';
 import { OrderStatus, PreorderConfig } from '@/lib/preorder/types';
 
 interface StaffOrder {
@@ -25,10 +26,18 @@ interface StaffOrder {
 }
 
 interface Summary {
-  config: PreorderConfig;
+  config: PreorderConfig & { stock: StockConfig };
   piecesLeft: number;
+  /** Halves still sellable per filling. */
+  stockLeft: Halves;
   orders: StaffOrder[];
 }
+
+/** Halves → pieces for staff: 7 halves = 3.5 pieces. */
+const piecesText = (halves: number) => String(halves / 2);
+
+const draftsOf = (stock: StockConfig) =>
+  Object.fromEntries(MOODS.map((m) => [m, piecesText(stock[m].halves)])) as Record<FundamentalMood, string>;
 
 const POLL_MS = 15000;
 const PIN_KEY = 'moodwhich:preorder:admin-pin';
@@ -63,6 +72,7 @@ export default function OrdersPanel() {
   const [query, setQuery] = useState('');
   const [slip, setSlip] = useState<{ order: StaffOrder; url: string } | null>(null);
   const [maxDraft, setMaxDraft] = useState('');
+  const [stockDraft, setStockDraft] = useState<Record<FundamentalMood, string> | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
   const [resetPin, setResetPin] = useState('');
 
@@ -85,6 +95,7 @@ export default function OrdersPanel() {
       setBusy(false);
       if (res) {
         setMaxDraft(String(res.config.maxPieces));
+        setStockDraft(draftsOf(res.config.stock));
         try {
           sessionStorage.setItem(PIN_KEY, candidate);
         } catch {
@@ -122,6 +133,7 @@ export default function OrdersPanel() {
       if (!alive || !res.ok) return;
       setData(res);
       setMaxDraft(String(res.config.maxPieces));
+      setStockDraft(draftsOf(res.config.stock));
     });
     return () => {
       alive = false;
@@ -271,6 +283,59 @@ export default function OrdersPanel() {
                 <b>{prep.byItem[m.id]} ชิ้น</b>
               </li>
             ))}
+          </ul>
+        </section>
+
+        <section className={card}>
+          <h2 className="font-black">
+            สต็อกแต่ละไส้ <span className="font-normal text-xs text-ink/60">(นับเป็นชิ้น · ชิ้นไส้เดียว = 2 ครึ่ง, MIX = ไส้ละ 1 ครึ่ง)</span>
+          </h2>
+          <ul className="mt-2 space-y-2">
+            {MOODS.map((m) => {
+              const entry = data.config.stock[m];
+              const used = prep.halves[m];
+              const left = data.stockLeft[m];
+              const draft = stockDraft?.[m] ?? piecesText(entry.halves);
+              const out = !entry.open || left <= 0;
+              return (
+                <li key={m} className="rounded-xl p-2.5 flex flex-wrap items-center gap-x-3 gap-y-2" style={{ backgroundColor: BASE_SANDWICH_FILLINGS[m].color }}>
+                  <div className="min-w-0 flex-1 basis-40">
+                    <p className="font-black leading-tight">
+                      {BASE_SANDWICH_FILLINGS[m].emoji} {FILLING_SHORT[m]}
+                      {out && <span className="ml-1.5 rounded bg-alert px-1.5 py-0.5 text-[11px] font-black text-white align-middle">{entry.open ? 'หมด' : 'ปิดขาย'}</span>}
+                    </p>
+                    <p className="text-xs font-semibold">
+                      สั่งแล้ว {piecesText(used)} ชิ้น · เหลือ {piecesText(left)} ชิ้น
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-sm font-semibold">
+                    <label htmlFor={`stock-${m}`}>รับ</label>
+                    <input
+                      id={`stock-${m}`}
+                      type="number"
+                      min={0}
+                      step={0.5}
+                      value={draft}
+                      onChange={(e) => setStockDraft((d) => ({ ...(d ?? draftsOf(data.config.stock)), [m]: e.target.value }))}
+                      className="w-16 rounded-lg border-2 border-ink bg-white px-2 py-1.5 text-right font-bold"
+                    />
+                    <span>ชิ้น</span>
+                    <button
+                      onClick={() => void call({ action: 'settings', stock: { [m]: { pieces: Number(draft) } } })}
+                      className="rounded-lg bg-ink text-yellow px-3 py-1.5 font-bold cursor-pointer"
+                    >
+                      บันทึก
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => void call({ action: 'settings', stock: { [m]: { open: !entry.open } } })}
+                    className={`rounded-full px-3 py-1.5 text-sm font-bold border-2 border-ink cursor-pointer ${entry.open ? 'bg-white text-ink' : 'bg-alert text-white'}`}
+                  >
+                    {entry.open ? 'ตั้งเป็นหมด' : 'เปิดขายอีกครั้ง'}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </section>
 
