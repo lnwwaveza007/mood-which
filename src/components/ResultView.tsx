@@ -257,6 +257,7 @@ export default function ResultView({ mood, onRetake }: ResultViewProps) {
         </div>
 
         <Link
+          onClick={() => sfx.tap()}
           href={`/preorder?preset=${encodeURIComponent(pieceId(menuMoods[0], menuMoods[menuMoods.length - 1]))}`}
           className="btn-sticker block text-center rounded-full py-3 font-black text-base"
         >

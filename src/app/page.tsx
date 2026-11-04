@@ -111,6 +111,7 @@ export default function Home() {
           {screenState === 'landing' && (
             <Link
               href="/preorder"
+              onClick={() => sfx.tap()}
               className="inline-flex items-center gap-1.5 rounded-full border-2 border-ink bg-alert px-3 py-1 text-[11px] font-bold text-white shadow-[2px_2px_0_#0D0D0D] sm:text-sm"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-white motion-safe:animate-pulse" aria-hidden="true" />
@@ -268,6 +269,7 @@ function Landing({ onStart }: { onStart: () => void }) {
           <p className="mt-3 text-xs text-white/70">ใช้เวลาไม่ถึง 1 นาที · ได้การ์ดแชร์ลง IG Story</p>
           <Link
             href="/preorder"
+            onClick={() => sfx.start()}
             className="group relative mt-7 mx-auto flex w-full max-w-sm items-center gap-3 rounded-2xl border-[3px] border-ink bg-white px-4 py-3.5 text-left text-ink shadow-[6px_6px_0_#0D0D0D] transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-1 active:translate-y-1 active:shadow-[2px_2px_0_#0D0D0D]"
           >
             <span className="absolute -top-3.5 -left-2 -rotate-6 border-2 border-ink bg-alert px-2 py-0.5 font-label text-[11px] font-bold tracking-wider text-white">

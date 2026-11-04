@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { QRCodeCanvas } from 'qrcode.react';
 import { ArrowLeft, Check, Copy, Download, ImagePlus, Loader2, MapPin, Minus, Plus } from 'lucide-react';
 import ChibiSticker from '@/components/ChibiSticker';
+import SoundToggle from '@/components/SoundToggle';
+import { sfx } from '@/lib/sound';
 import { InstagramIcon, SectionTag, Sparkle } from '@/components/Decor';
 import { BASE_SANDWICH_FILLINGS, FundamentalMood } from '@/data/quizData';
 import { sandwichBackground } from '@/data/sandwich';
@@ -84,7 +86,10 @@ function Stepper({ label, qty, canAdd, onChange }: { label: string; qty: number;
     <div className="flex items-center gap-1.5">
       <button
         type="button"
-        onClick={() => onChange(qty - 1)}
+        onClick={() => {
+          sfx.back();
+          onChange(qty - 1);
+        }}
         disabled={qty === 0}
         aria-label={`ลด ${label}`}
         className="w-9 h-9 rounded-full bg-white border-2 border-ink flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
@@ -96,7 +101,10 @@ function Stepper({ label, qty, canAdd, onChange }: { label: string; qty: number;
       </span>
       <button
         type="button"
-        onClick={() => onChange(qty + 1)}
+        onClick={() => {
+          sfx.tap();
+          onChange(qty + 1);
+        }}
         disabled={!canAdd}
         aria-label={`เพิ่ม ${label}`}
         className="w-9 h-9 rounded-full bg-ink text-yellow border-2 border-ink flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
@@ -221,10 +229,12 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
     });
 
   const pick1 = (m: FundamentalMood) => {
+    sfx.select(MOODS.indexOf(m));
     setHalf1(m);
     if (linked) setHalf2(m);
   };
   const pick2 = (m: FundamentalMood) => {
+    sfx.select(MOODS.indexOf(m));
     setHalf2(m);
     setLinked(m === half1);
   };
@@ -237,11 +247,18 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
   };
 
   const addPiece = () => {
+    sfx.add();
     setQty(building.id, (cart[building.id] ?? 0) + 1);
     setJustAdded(true);
   };
 
   const cartLines = MENU.filter((m) => (cart[m.id] ?? 0) > 0);
+
+  /** Shows an error message with a soft buzz. */
+  const fail = (message: string) => {
+    sfx.error();
+    setError(message);
+  };
 
   const pickSlip = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -253,10 +270,11 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
       const small = await shrinkSlip(file);
       setSlip(small);
       setSlipUrl(URL.createObjectURL(small));
+      sfx.shutter();
     } catch {
       setSlip(null);
       setSlipUrl(null);
-      setError('เปิดรูปนี้ไม่ได้ ลองแคปหน้าจอสลิปแล้วเลือกรูปใหม่');
+      fail('เปิดรูปนี้ไม่ได้ ลองแคปหน้าจอสลิปแล้วเลือกรูปใหม่');
     }
     setSlipBusy(false);
   };
@@ -264,6 +282,7 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
   const saveQr = () => {
     const canvas = qrBox.current?.querySelector('canvas');
     if (!canvas) return;
+    sfx.tap();
     const a = document.createElement('a');
     a.href = canvas.toDataURL('image/png');
     a.download = `moodwhich-promptpay-${total}.png`;
@@ -273,6 +292,7 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
   const copyId = async () => {
     try {
       await navigator.clipboard.writeText(PROMPTPAY_ID);
+      sfx.ding();
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -283,9 +303,9 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (sending) return;
-    if (!name.trim()) return setError(ERROR_TEXT.bad_name);
-    if (!/^0\d{8,9}$/.test(phone.replace(/\D/g, ''))) return setError(ERROR_TEXT.bad_phone);
-    if (!slip) return setError('แนบรูปสลิปก่อนยืนยันนะ');
+    if (!name.trim()) return fail(ERROR_TEXT.bad_name);
+    if (!/^0\d{8,9}$/.test(phone.replace(/\D/g, ''))) return fail(ERROR_TEXT.bad_phone);
+    if (!slip) return fail('แนบรูปสลิปก่อนยืนยันนะ');
 
     setSending(true);
     setError(null);
@@ -309,6 +329,7 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
     setSending(false);
 
     if (res.ok && res.code) {
+      sfx.order();
       setDone({ code: res.code, pieces: res.pieces ?? pieces, total: res.total ?? total });
       window.scrollTo(0, 0);
       return;
@@ -316,10 +337,10 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
     if (res.error === 'sold_out') {
       const left = res.piecesLeft ?? 0;
       setStatus((s) => (s ? { ...s, piecesLeft: left } : s));
-      setError(left > 0 ? `เหลือให้สั่งได้อีก ${left} ชิ้น ลองลดจำนวนลง แล้วทักร้านเรื่องยอดที่โอนเกิน` : CLOSED_TEXT.sold_out);
+      fail(left > 0 ? `เหลือให้สั่งได้อีก ${left} ชิ้น ลองลดจำนวนลง แล้วทักร้านเรื่องยอดที่โอนเกิน` : CLOSED_TEXT.sold_out);
       return;
     }
-    setError(ERROR_TEXT[res.error ?? ''] ?? 'มีบางอย่างผิดพลาด ลองกดยืนยันอีกครั้ง');
+    fail(ERROR_TEXT[res.error ?? ''] ?? 'มีบางอย่างผิดพลาด ลองกดยืนยันอีกครั้ง');
   };
 
   const header = (
@@ -327,7 +348,10 @@ export default function PreorderFlow({ preset }: { preset?: string }) {
       <Link href="/" className="inline-flex items-center gap-1 text-xs font-semibold text-yellow">
         <ArrowLeft className="w-4 h-4" /> หน้าแรก
       </Link>
-      <SectionTag />
+      <div className="flex items-center gap-3">
+        <SectionTag />
+        <SoundToggle />
+      </div>
     </header>
   );
 
