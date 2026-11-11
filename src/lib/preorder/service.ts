@@ -7,7 +7,7 @@ import { deleteSlips, readSlip, saveSlip, sniffImage } from './slips';
 import { FundamentalMood } from '@/data/quizData';
 import { Cart, countPieces, itemById, MAX_PIECES_PER_ORDER, MOODS, PREORDER_DEADLINE, priceFor, PROMPTPAY_ID } from './menu';
 import { anyPieceLeft, defaultStock, Halves, halvesOfCart, leftHalves, StockConfig } from './stock';
-import { ClosedReason, emptyPreorder, Order, OrderStatus, PreorderState } from './types';
+import { ClosedReason, emptyPreorder, Order, OrderStatus, PayMethod, PreorderState, Sale } from './types';
 
 const store = docStore<PreorderState>('preorder', emptyPreorder);
 
@@ -29,10 +29,15 @@ const reserved = (s: PreorderState) => live(s).reduce((sum, o) => sum + o.pieces
 
 const piecesLeft = (s: PreorderState) => Math.max(0, s.config.maxPieces - reserved(s));
 
-/** Halves still sellable per filling. Rejected orders give theirs back. */
+const liveSales = (s: PreorderState) => (s.sales ?? []).filter((x) => !x.voided);
+
+/**
+ * Halves still sellable per filling. Pre-orders and booth sales share the same stock.
+ * Rejected orders and voided sales give theirs back.
+ */
 function stockLeft(s: PreorderState): Halves {
   const used = halvesOfCart(
-    live(s).reduce<Cart>((all, o) => {
+    [...live(s), ...liveSales(s)].reduce<Cart>((all, o) => {
       for (const [id, qty] of Object.entries(o.items)) all[id] = (all[id] ?? 0) + qty;
       return all;
     }, {}),
@@ -70,6 +75,11 @@ function parseItems(raw: FormDataEntryValue | null): Cart | null {
   } catch {
     return null;
   }
+  return parseCart(parsed, MAX_PIECES_PER_ORDER);
+}
+
+/** A cart object { menuId: qty } with 1..maxPieces pieces, or null. */
+function parseCart(parsed: unknown, maxPieces: number): Cart | null {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
   const cart: Cart = {};
   for (const [id, qty] of Object.entries(parsed)) {
@@ -77,7 +87,7 @@ function parseItems(raw: FormDataEntryValue | null): Cart | null {
     if ((qty as number) > 0) cart[id] = qty as number;
   }
   const pieces = countPieces(cart);
-  return pieces >= 1 && pieces <= MAX_PIECES_PER_ORDER ? cart : null;
+  return pieces >= 1 && pieces <= maxPieces ? cart : null;
 }
 
 /** Reply for an order that no longer fits the stock: too many pieces overall, or a filling ran short. */
@@ -260,6 +270,8 @@ export async function staff(pin: unknown, req: StaffAction) {
         removed.push(...s.orders.map((o) => o.slipPath));
         s.orders = [];
         s.seq = 0;
+        s.sales = [];
+        s.saleSeq = 0;
         break;
       }
       default:
@@ -280,4 +292,85 @@ export async function staffSlip(pin: unknown, code: unknown) {
   if (found.bad) return { slip: null, reply: found.bad };
   const slip = found.path ? await readSlip(found.path) : null;
   return slip ? { slip, reply: null } : { slip: null, reply: { ok: false, error: 'bad_request' } as ServiceError };
+}
+
+/* ── Booth POS ───────────────────────────────────────────────────── */
+
+const MAX_PIECES_PER_SALE = 50;
+
+export type PosAction =
+  | { action: 'status' }
+  | { action: 'sell'; requestId: string; items: unknown; pay: PayMethod }
+  | { action: 'void'; code: string; voided: boolean };
+
+function posSummary(s: PreorderState) {
+  const kept = liveSales(s);
+  const sum = (list: { total: number }[]) => list.reduce((n, x) => n + x.total, 0);
+  return {
+    ok: true as const,
+    stock: withStock(s).config.stock,
+    stockLeft: stockLeft(s),
+    totals: {
+      sales: kept.length,
+      pieces: kept.reduce((n, x) => n + x.pieces, 0),
+      cash: sum(kept.filter((x) => x.pay === 'cash')),
+      transfer: sum(kept.filter((x) => x.pay === 'transfer')),
+      preorderPaid: sum(s.orders.filter((o) => o.status === 'paid')),
+      preorderPieces: reserved(s),
+    },
+    sales: [...(s.sales ?? [])].reverse(),
+  };
+}
+
+/** Booth till, behind the staff PIN: record a walk-in sale, void or restore one, or read the totals. */
+export async function pos(pin: unknown, req: PosAction) {
+  return store.update((s) => {
+    const bad = checkPin(s, pin, Date.now());
+    if (bad) return bad;
+    withStock(s);
+    const sales = (s.sales ??= []);
+
+    switch (req.action) {
+      case 'status':
+        break;
+      case 'sell': {
+        const requestId = typeof req.requestId === 'string' ? req.requestId : '';
+        const items = parseCart(req.items, MAX_PIECES_PER_SALE);
+        if (!/^[\w-]{8,64}$/.test(requestId) || !items || (req.pay !== 'cash' && req.pay !== 'transfer')) {
+          return { ok: false, error: 'bad_request' } as ServiceError;
+        }
+        if (sales.some((x) => x.requestId === requestId)) break; // double tap or retry: already recorded
+        const short = shortFillings(s, items);
+        if (short.length) return { ok: false, error: 'sold_out', short } as const;
+        s.saleSeq = (s.saleSeq ?? 0) + 1;
+        const sale: Sale = {
+          code: `S-${String(s.saleSeq).padStart(3, '0')}`,
+          requestId,
+          at: new Date().toISOString(),
+          items,
+          pieces: countPieces(items),
+          total: priceFor(items), // always computed here, never taken from the browser
+          pay: req.pay,
+          voided: false,
+        };
+        sales.push(sale);
+        break;
+      }
+      case 'void': {
+        const sale = sales.find((x) => x.code === req.code);
+        if (!sale) return { ok: false, error: 'bad_request' } as ServiceError;
+        if (req.voided) sale.voided = true;
+        else if (sale.voided) {
+          // Restoring a voided sale takes its stock again, so it must still be there.
+          const short = shortFillings(s, sale.items);
+          if (short.length) return { ok: false, error: 'sold_out', short } as const;
+          sale.voided = false;
+        }
+        break;
+      }
+      default:
+        return { ok: false, error: 'bad_request' } as ServiceError;
+    }
+    return posSummary(s);
+  });
 }
