@@ -70,4 +70,12 @@ Before launch, set these on Vercel, then redeploy:
 | `NEXT_PUBLIC_PROMPTPAY_NAME` | Account name that customers see in their bank app |
 | `BLOB_STORE_ID` | Added when you connect the Blob store |
 
+## 💵 Booth POS (walk-in sales)
+
+- Staff page: `/pos` (same PIN as the draw, `DRAW_ADMIN_PIN`). Works on a phone or the booth iPad.
+- Tap menu tiles to build a bill, then tap **เงินสด** (shows change) or **โอน** (shows a PromptPay QR for the exact amount), then confirm.
+- Booth sales use the same per-filling stock as pre-orders, so the stock at the top is what is really left. Tiles grey out when a filling runs out.
+- **สรุปยอด** shows cash (what should be in the drawer), transfers, pieces sold per menu, and pre-order money. A wrong bill can be cancelled (ยกเลิก), which gives its stock back.
+- Change stock limits on `/preorder/admin`. **ลบข้อมูลทั้งหมด** there also deletes booth sales.
+
 After the event, use **ลบข้อมูลทั้งหมด** on the staff page. The customer page promises that this data is deleted.
