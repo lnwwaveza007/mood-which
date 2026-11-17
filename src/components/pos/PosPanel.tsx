@@ -30,25 +30,48 @@ const pieces = (halves: number) => String(halves / 2);
 const timeTh = (iso: string) => new Date(iso).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' });
 const newRequestId = () => crypto.randomUUID().replace(/-/g, '');
 
-const csvCell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+/** One CSV cell. A leading = + - @ would run as a formula in Excel, so it gets a ' in front. */
+const csvCell = (v: string | number) => {
+  const text = String(v);
+  return `"${(/^[=+@-]/.test(text) ? "'" + text : text).replace(/"/g, '""')}"`;
+};
 
-/** Download every booth sale (cancelled ones too, marked) as a CSV that Excel opens with Thai text intact. */
-function exportSales(sales: Sale[]) {
-  const head = ['บิล', 'เวลา', 'รายการ', 'ชิ้น', 'ยอด', 'จ่ายด้วย', 'สถานะ'];
-  const rows = [...sales].reverse().map((s) => [
-    s.code,
-    new Date(s.at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'medium' }),
-    Object.entries(s.items).map(([id, qty]) => `${itemById(id)?.title ?? id} x${qty}`).join(' | '),
-    s.pieces,
-    s.total,
-    s.pay === 'cash' ? 'เงินสด' : 'โอน',
-    s.voided ? 'ยกเลิก' : 'ปกติ',
-  ]);
-  const csv = '﻿' + [head, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n');
+const whenTh = (iso: string) => new Date(iso).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'medium' });
+const itemsText = (items: Cart) => Object.entries(items).map(([id, qty]) => `${itemById(id)?.title ?? id} x${qty}`).join(' | ');
+const PREORDER_STATUS: Record<string, string> = { pending: 'รอตรวจสลิป', paid: 'จ่ายแล้ว', rejected: 'สลิปไม่ผ่าน' };
+
+interface ExportOrder {
+  code: string;
+  at: string;
+  name: string;
+  phone: string;
+  ig?: string;
+  note?: string;
+  items: Cart;
+  pieces: number;
+  total: number;
+  status: string;
+  delivered: boolean;
+}
+
+/** Every booth sale and every pre-order (cancelled / rejected ones marked) as one CSV, oldest first. Excel opens Thai text intact. */
+function downloadCsv(sales: Sale[], orders: ExportOrder[]) {
+  const head = ['ประเภท', 'บิล', 'เวลา', 'ชื่อ', 'เบอร์', 'IG', 'หมายเหตุ', 'รายการ', 'ชิ้น', 'ยอด', 'จ่ายด้วย', 'สถานะ', 'ส่งแล้ว'];
+  const all = [
+    ...sales.map((s) => ({
+      at: s.at,
+      row: ['หน้าร้าน', s.code, whenTh(s.at), '', '', '', '', itemsText(s.items), s.pieces, s.total, s.pay === 'cash' ? 'เงินสด' : 'โอน', s.voided ? 'ยกเลิก' : 'ปกติ', ''],
+    })),
+    ...orders.map((o) => ({
+      at: o.at,
+      row: ['พรีออเดอร์', o.code, whenTh(o.at), o.name, o.phone, o.ig ?? '', o.note ?? '', itemsText(o.items), o.pieces, o.total, 'โอน', PREORDER_STATUS[o.status] ?? o.status, o.delivered ? 'ใช่' : 'ไม่'],
+    })),
+  ].sort((a, b) => a.at.localeCompare(b.at));
+  const csv = '﻿' +[head, ...all.map((x) => x.row)].map((r) => r.map(csvCell).join(',')).join('\r\n');
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `booth-sales-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `moodwhich-sales-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
@@ -69,6 +92,7 @@ export default function PosPanel() {
   const [paying, setPaying] = useState<PayMethod | null>(null);
   const [received, setReceived] = useState('');
   const [done, setDone] = useState<Sale | null>(null);
+  const [exporting, setExporting] = useState(false);
   // One id per checkout: a double tap or a retry sends the same id, so the server records it once.
   const requestId = useRef(newRequestId());
 
@@ -166,6 +190,19 @@ export default function PosPanel() {
       if (next[id] <= 0) delete next[id];
       return next;
     });
+
+  /** Fetch every booth sale and pre-order fresh from the server, then download them as one CSV. */
+  const onExport = async () => {
+    setExporting(true);
+    const res = await api<{ sales: Sale[]; orders: ExportOrder[] }>('/api/pos', { pin: pinRef.current, action: 'export' });
+    setExporting(false);
+    if (!res.ok) {
+      setError(errorText(res as ApiFail));
+      return;
+    }
+    setError(null);
+    downloadCsv(res.sales, res.orders);
+  };
 
   const checkout = async (pay: PayMethod) => {
     setBusy(true);
@@ -277,7 +314,7 @@ export default function PosPanel() {
             </section>
           </>
         ) : (
-          <Summary data={data} onVoid={(code, voided) => void call({ action: 'void', code, voided })} />
+          <Summary data={data} exporting={exporting} onExport={onExport} onVoid={(code, voided) => void call({ action: 'void', code, voided })} />
         )}
       </div>
 
@@ -436,7 +473,17 @@ function Tile({ item, qty, enabled, onTap }: { item: MenuItem; qty: number; enab
   );
 }
 
-function Summary({ data, onVoid }: { data: PosData; onVoid: (code: string, voided: boolean) => void }) {
+function Summary({
+  data,
+  exporting,
+  onExport,
+  onVoid,
+}: {
+  data: PosData;
+  exporting: boolean;
+  onExport: () => Promise<void>;
+  onVoid: (code: string, voided: boolean) => void;
+}) {
   const t = data.totals;
   const sold = useMemo(() => {
     const byItem: Cart = {};
@@ -491,11 +538,11 @@ function Summary({ data, onVoid }: { data: PosData; onVoid: (code: string, voide
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-black">บิลทั้งหมด</h2>
           <button
-            onClick={() => exportSales(data.sales)}
-            disabled={data.sales.length === 0}
+            onClick={() => void onExport()}
+            disabled={exporting}
             className="rounded-lg bg-ink text-yellow px-3 py-1.5 text-sm font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <Download className="w-4 h-4" /> ดาวน์โหลด CSV
+            <Download className="w-4 h-4" /> ดาวน์โหลด CSV (หน้าร้าน + พรีออเดอร์)
           </button>
         </div>
         <ul className="mt-2 divide-y divide-ink/10">
