@@ -301,7 +301,8 @@ const MAX_PIECES_PER_SALE = 50;
 export type PosAction =
   | { action: 'status' }
   | { action: 'sell'; requestId: string; items: unknown; pay: PayMethod }
-  | { action: 'void'; code: string; voided: boolean };
+  | { action: 'void'; code: string; voided: boolean }
+  | { action: 'export' };
 
 function posSummary(s: PreorderState) {
   const kept = liveSales(s);
@@ -333,6 +334,25 @@ export async function pos(pin: unknown, req: PosAction) {
     switch (req.action) {
       case 'status':
         break;
+      case 'export':
+        // Every booth sale and every pre-order, for the end-of-event sheet. No slip files.
+        return {
+          ok: true as const,
+          sales: [...sales],
+          orders: s.orders.map((o) => ({
+            code: o.code,
+            at: o.at,
+            name: o.name,
+            phone: o.phone,
+            ig: o.ig,
+            note: o.note,
+            items: o.items,
+            pieces: o.pieces,
+            total: o.total,
+            status: o.status,
+            delivered: o.delivered,
+          })),
+        };
       case 'sell': {
         const requestId = typeof req.requestId === 'string' ? req.requestId : '';
         const items = parseCart(req.items, MAX_PIECES_PER_SALE);
