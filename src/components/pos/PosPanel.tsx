@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Banknote, Minus, QrCode, Trash2, Undo2, X } from 'lucide-react';
+import { Banknote, Download, Minus, QrCode, Trash2, Undo2, X } from 'lucide-react';
 import { SectionTag } from '@/components/Decor';
 import { BASE_SANDWICH_FILLINGS, FundamentalMood } from '@/data/quizData';
 import { api, ApiFail, errorText } from '@/lib/draw/client';
@@ -29,6 +29,29 @@ const color = (m: FundamentalMood) => BASE_SANDWICH_FILLINGS[m].color;
 const pieces = (halves: number) => String(halves / 2);
 const timeTh = (iso: string) => new Date(iso).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' });
 const newRequestId = () => crypto.randomUUID().replace(/-/g, '');
+
+const csvCell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+
+/** Download every booth sale (cancelled ones too, marked) as a CSV that Excel opens with Thai text intact. */
+function exportSales(sales: Sale[]) {
+  const head = ['บิล', 'เวลา', 'รายการ', 'ชิ้น', 'ยอด', 'จ่ายด้วย', 'สถานะ'];
+  const rows = [...sales].reverse().map((s) => [
+    s.code,
+    new Date(s.at).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'medium' }),
+    Object.entries(s.items).map(([id, qty]) => `${itemById(id)?.title ?? id} x${qty}`).join(' | '),
+    s.pieces,
+    s.total,
+    s.pay === 'cash' ? 'เงินสด' : 'โอน',
+    s.voided ? 'ยกเลิก' : 'ปกติ',
+  ]);
+  const csv = '﻿' + [head, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `booth-sales-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 function failText(res: PosFail) {
   if (res.error === 'sold_out' && 'short' in res) return `ของไม่พอ: ${res.short.map((m) => FILLING_SHORT[m]).join(', ')}`;
@@ -465,7 +488,16 @@ function Summary({ data, onVoid }: { data: PosData; onVoid: (code: string, voide
       </section>
 
       <section className={card}>
-        <h2 className="font-black">บิลล่าสุด</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-black">บิลทั้งหมด</h2>
+          <button
+            onClick={() => exportSales(data.sales)}
+            disabled={data.sales.length === 0}
+            className="rounded-lg bg-ink text-yellow px-3 py-1.5 text-sm font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" /> ดาวน์โหลด CSV
+          </button>
+        </div>
         <ul className="mt-2 divide-y divide-ink/10">
           {data.sales.map((sale) => (
             <li key={sale.code} className={`py-2 flex items-center gap-3 ${sale.voided ? 'opacity-50' : ''}`}>
